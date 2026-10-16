@@ -791,19 +791,24 @@ function toast(msg) {
 
 const sb = { client: null, url: '', key: '', connected: false };
 
+const SB_DEFAULT_URL = 'https://jnyaidwlxawkjwrzapwy.supabase.co';
+const SB_DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpueWFpZHdseGF3a2p3cnphcHd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxMzQ4MjgsImV4cCI6MjEwNzcxMDgyOH0.b0Iuk0ubb1vXGn7qvNyrtCtiDHtxbYIvN7fv5xkjdbg';
+
 function initSupabase() {
   try {
     const raw = localStorage.getItem(SB_CONFIG_KEY);
+    let url = SB_DEFAULT_URL, key = SB_DEFAULT_KEY;
     if (raw) {
       const cfg = JSON.parse(raw);
-      if (cfg && cfg.url && cfg.key && window.supabase && window.supabase.createClient) {
-        sb.url = cfg.url;
-        sb.key = cfg.key;
-        sb.client = window.supabase.createClient(cfg.url, cfg.key);
-        sb.connected = true;
-        $('sbUrlInput').value = cfg.url;
-        $('sbKeyInput').value = cfg.key;
-      }
+      if (cfg && cfg.url && cfg.key) { url = cfg.url; key = cfg.key; }
+    }
+    if (window.supabase && window.supabase.createClient) {
+      sb.url = url;
+      sb.key = key;
+      sb.client = window.supabase.createClient(url, key);
+      sb.connected = true;
+      $('sbUrlInput').value = url;
+      $('sbKeyInput').value = key;
     }
   } catch (e) {
     sb.connected = false;
