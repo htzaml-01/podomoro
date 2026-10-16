@@ -1,0 +1,1209 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard Admin - Fokus Lime</title>
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg: #f3f4f7;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #f1f5f9;
+  --ink: #1e293b;
+  --soft: #64748b;
+  --muted: #94a3b8;
+  --line: rgba(30, 41, 59, 0.08);
+  --line-strong: rgba(30, 41, 59, 0.14);
+  --blue: #0663e5;
+  --blue-hover: #0550ba;
+  --blue-tint: #eff6ff;
+  --on-blue: #ffffff;
+  --danger: #ef4444;
+  --danger-tint: #fef2f2;
+  --success: #10b981;
+  --success-tint: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-tint: #fffbeb;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --radius-card: 24px;
+  --radius-btn: 999px;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+  padding: 24px 20px 48px;
+}
+
+.wrap {
+  max-width: 1140px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Header */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+}
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: var(--blue);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 8px 16px -4px rgba(6, 99, 229, 0.4);
+}
+.logo-icon svg { width: 22px; height: 22px; }
+.brand-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.badge-admin-tag {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--warning-tint);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 2px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+button { font: inherit; cursor: pointer; border: 0; background: none; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: var(--radius-btn);
+  font-weight: 600;
+  font-size: 13.5px;
+  transition: all 0.2s ease;
+}
+.btn svg { width: 16px; height: 16px; }
+.btn-primary {
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(6, 99, 229, 0.25);
+}
+.btn-primary:hover {
+  background: var(--blue-hover);
+  transform: translateY(-1px);
+}
+.btn-white {
+  background: #ffffff;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-sm);
+}
+.btn-white:hover {
+  background: var(--surface-2);
+  transform: translateY(-1px);
+}
+.btn-danger-ghost {
+  color: var(--danger);
+  background: var(--danger-tint);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.btn-danger-ghost:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Card */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--line);
+}
+
+/* Overview Stat Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .stats-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.stat-box {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.stat-box-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.stat-box-lbl {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--soft);
+}
+.stat-box-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+.stat-box-icon svg { width: 18px; height: 18px; }
+.stat-box-icon.blue { background: var(--blue-tint); color: var(--blue); }
+.stat-box-icon.green { background: var(--success-tint); color: var(--success); }
+.stat-box-icon.orange { background: var(--warning-tint); color: var(--warning); }
+.stat-box-icon.purple { background: #faf5ff; color: #9333ea; }
+.stat-box-num {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.stat-box-sub {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Section Header */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 360px;
+}
+.search-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.search-input:focus {
+  border-color: var(--blue);
+  background: #ffffff;
+}
+
+/* User Table */
+.table-wrap {
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  overflow-x: auto;
+  background: #ffffff;
+}
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+.custom-table th {
+  background: var(--surface-2);
+  padding: 14px 16px;
+  font-weight: 600;
+  color: var(--soft);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.custom-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.custom-table tr:last-child td {
+  border-bottom: none;
+}
+.custom-table tr:hover td {
+  background: var(--surface-2);
+}
+.badge-role {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+.badge-role.admin { background: #fef3c7; color: #92400e; }
+.badge-role.user { background: var(--surface-3); color: var(--soft); }
+
+.action-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-sm-action {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.btn-sm-action:hover {
+  transform: scale(1.04);
+}
+.btn-inspect {
+  background: var(--blue-tint);
+  color: var(--blue);
+}
+.btn-del {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+
+/* Supabase Box */
+.supabase-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 24px;
+}
+@media (max-width: 860px) {
+  .supabase-panel { grid-template-columns: minmax(0, 1fr); }
+}
+
+.db-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+.status-indicator.online {
+  background: var(--success);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--soft);
+}
+.field input {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.field input:focus {
+  border-color: var(--blue);
+  background: #ffffff;
+}
+
+.form-btns-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.schema-box {
+  background: var(--surface-2);
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.code-preview {
+  background: #0f172a;
+  color: #38bdf8;
+  padding: 12px;
+  border-radius: 10px;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-x: auto;
+  max-height: 140px;
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.modal-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+.modal-card {
+  background: #ffffff;
+  border-radius: 24px;
+  width: min(100%, 600px);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+.modal-head {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+.modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--soft);
+  background: var(--surface-2);
+}
+.modal-close:hover {
+  color: var(--ink);
+  background: var(--surface-3);
+}
+.modal-close svg { width: 18px; height: 18px; }
+.modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inspect-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  background: var(--surface-2);
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+.inspect-summary b { color: var(--soft); }
+.user-tasks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.user-task-item {
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1e293b;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 2000;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-logo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6.5V12l3.5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-focus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <div class="logo-icon"><svg><use href="#i-logo"/></svg></div>
+      <div class="brand-title">
+        Fokus Lime
+        <span class="badge-admin-tag">Admin</span>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html" class="btn btn-white"><svg><use href="#i-arrow-left"/></svg> Ke Aplikasi Fokus</a>
+      <button type="button" class="btn btn-danger-ghost" id="adminLogoutBtn"><svg><use href="#i-logout"/></svg> Keluar</button>
+    </div>
+  </header>
+
+  <!-- Statistics Overview Grid (White Cards) -->
+  <section class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-box-head">
+        <span class="stat-box-lbl">Total Pengguna</span>
+        <div class="stat-box-icon blue"><svg><use href="#i-users"/></svg></div>
+      </div>
+      <div class="stat-box-num" id="sTotalUsers">0</div>
+      <div class="stat-box-sub">Terdaftar di database</div>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-box-head">
+        <span class="stat-box-lbl">Total Sesi Fokus</span>
+        <div class="stat-box-icon green"><svg><use href="#i-focus"/></svg></div>
+      </div>
+      <div class="stat-box-num" id="sTotalSessions">0</div>
+      <div class="stat-box-sub">Sesi selesai dikerjakan</div>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-box-head">
+        <span class="stat-box-lbl">Waktu Produktif</span>
+        <div class="stat-box-icon purple"><svg><use href="#i-clock"/></svg></div>
+      </div>
+      <div class="stat-box-num" id="sTotalHours">0<small style="font-size:16px;font-weight:600">j</small></div>
+      <div class="stat-box-sub" id="sTotalMinDetail">0 menit akumulasi</div>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-box-head">
+        <span class="stat-box-lbl">Database Status</span>
+        <div class="stat-box-icon orange"><svg><use href="#i-db"/></svg></div>
+      </div>
+      <div class="stat-box-num" style="font-size:20px;padding-top:6px" id="sDbTitle">Local Storage</div>
+      <div class="stat-box-sub" id="sDbSub">Mode Offline</div>
+    </div>
+  </section>
+
+  <!-- User Management Card (White Card) -->
+  <section class="card">
+    <div class="section-head">
+      <h2 class="section-title"><svg style="width:20px;height:20px;color:var(--blue)"><use href="#i-users"/></svg> Daftar Pengguna Terdaftar</h2>
+      <div class="search-wrapper">
+        <input type="text" id="userSearchInput" class="search-input" placeholder="Cari nama pengguna..." autocomplete="off">
+        <button type="button" class="btn btn-white" id="refreshBtn" title="Muat Ulang"><svg><use href="#i-refresh"/></svg></button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th style="width:50px">No</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Terdaftar</th>
+            <th>Sesi Selesai</th>
+            <th>Total Fokus</th>
+            <th style="text-align:right">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Supabase Cloud Configuration (White Card) -->
+  <section class="card">
+    <div class="section-head">
+      <h2 class="section-title"><svg style="width:20px;height:20px;color:var(--blue)"><use href="#i-db"/></svg> Integrasi Supabase Cloud Database</h2>
+    </div>
+
+    <div class="supabase-panel">
+      <div>
+        <div class="db-status-bar">
+          <div class="status-indicator" id="sbDot"></div>
+          <span id="sbBadgeText">Local Database (Belum Terhubung ke Supabase Cloud)</span>
+        </div>
+
+        <form id="sbForm" autocomplete="off">
+          <div class="field">
+            <label for="sbUrlInput">Project URL</label>
+            <input type="url" id="sbUrlInput" placeholder="https://xyzcompany.supabase.co" required>
+          </div>
+          <div class="field">
+            <label for="sbKeyInput">Anon Public Key</label>
+            <input type="text" id="sbKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required>
+          </div>
+          <div class="form-btns-row">
+            <button type="submit" class="btn btn-primary" id="btnSaveSb">Simpan & Hubungkan</button>
+            <button type="button" class="btn btn-white" id="btnDisconnectSb">Putuskan Koneksi</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="schema-box">
+        <div style="font-weight:700;font-size:13.5px">Skema SQL Supabase</div>
+        <div style="font-size:12px;color:var(--soft)">Jalankan query ini di menu <b>SQL Editor</b> dashboard Supabase milikmu:</div>
+        <pre class="code-preview" id="sqlPreviewCode">-- Salin dari berkas supabase-schema.sql
+CREATE TABLE IF NOT EXISTS public.fokus_users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT DEFAULT 'user' NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS public.fokus_user_data (
+  username TEXT PRIMARY KEY REFERENCES public.fokus_users(username) ON DELETE CASCADE,
+  tasks JSONB DEFAULT '[]'::jsonb NOT NULL,
+  sessions JSONB DEFAULT '[]'::jsonb NOT NULL,
+  goal INTEGER DEFAULT 120 NOT NULL
+);
+ALTER TABLE public.fokus_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fokus_user_data ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public select fokus_users" ON public.fokus_users FOR SELECT USING (true);
+CREATE POLICY "Public insert fokus_users" ON public.fokus_users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update fokus_users" ON public.fokus_users FOR UPDATE USING (true);
+CREATE POLICY "Public delete fokus_users" ON public.fokus_users FOR DELETE USING (true);
+CREATE POLICY "Public all fokus_user_data" ON public.fokus_user_data FOR ALL USING (true);</pre>
+        <button type="button" class="btn btn-white" id="btnCopySql" style="width:100%">Salin Skrip SQL Lengkap</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Modal Inspect User -->
+<div class="modal-overlay" id="inspectModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 class="modal-title">Detail Pengguna</h3>
+      <button type="button" class="modal-close" id="closeInspectBtn"><svg><use href="#i-x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="inspect-summary">
+        <div><b>Username:</b> <span id="inspUser">-</span></div>
+        <div><b>Role:</b> <span id="inspRole">-</span></div>
+        <div><b>Terdaftar:</b> <span id="inspDate">-</span></div>
+        <div><b>Total Fokus:</b> <span id="inspFocus">-</span></div>
+      </div>
+      <div>
+        <div style="font-weight:700;margin-bottom:8px;font-size:13px">Daftar Tugas Pengguna</div>
+        <ul class="user-tasks-list" id="inspTasksList"></ul>
+      </div>
+      <div>
+        <div style="font-weight:700;margin-bottom:8px;font-size:13px">Sesi Terakhir</div>
+        <ul class="user-tasks-list" id="inspSessionsList"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastMsg"></div>
+
+<script>
+(() => {
+'use strict';
+
+const USERS_KEY = 'fokus_users_v2';
+const CURRENT_USER_KEY = 'fokus_current_user_v2';
+const SB_CONFIG_KEY = 'fokus_supabase_config_v2';
+const ADMIN_HASH = '252520c9eedc60aaa109031d54893a70a095fdd8e117ea8d89895727363b4c5e'; // admin123:fokus_salt_2026
+const LS_KEY = 'fokus-lime-v1';
+
+const $ = (id) => document.getElementById(id);
+
+// Pure JS SHA-256 for 100% reliability
+function sha256Sync(ascii) {
+  function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+  const mathPow = Math.pow; const maxWord = mathPow(2, 32); let i, j; let result = '';
+  const words = []; const asciiBitLength = ascii.length * 8; let hash = []; let k = []; let primeCounter = 0;
+  const isComposite = {};
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+  ascii += '\x80';
+  while (ascii.length % 64 - 56) ascii += '\x00';
+  for (i = 0; i < ascii.length; i++) {
+    j = ascii.charCodeAt(i);
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = ((asciiBitLength / maxWord) | 0);
+  words[words.length] = (asciiBitLength | 0);
+  for (j = 0; j < words.length;) {
+    const w = words.slice(j, j += 16);
+    const oldHash = hash;
+    hash = hash.slice(0, 8);
+    for (i = 0; i < 64; i++) {
+      const w15 = w[i - 15], w2 = w[i - 2];
+      const a = hash[0], e = hash[4];
+      const temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ ((~e) & hash[6])) + k[i] + (w[i] = (i < 16) ? w[i] : (w[i - 16] + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0].concat(hash);
+      hash[4] = (hash[4] + temp1) | 0;
+    }
+    for (i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+  }
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j >= 0; j--) {
+      const b = (hash[i] >> (8 * j)) & 255;
+      result += (b < 16 ? '0' : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+function hashPassword(str) {
+  return sha256Sync(str + ':fokus_salt_2026');
+}
+
+function toast(msg) {
+  const el = $('toastMsg');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+const sb = { client: null, url: '', key: '', connected: false };
+
+function initSupabase() {
+  try {
+    const raw = localStorage.getItem(SB_CONFIG_KEY);
+    if (raw) {
+      const cfg = JSON.parse(raw);
+      if (cfg && cfg.url && cfg.key && window.supabase && window.supabase.createClient) {
+        sb.url = cfg.url;
+        sb.key = cfg.key;
+        sb.client = window.supabase.createClient(cfg.url, cfg.key);
+        sb.connected = true;
+        $('sbUrlInput').value = cfg.url;
+        $('sbKeyInput').value = cfg.key;
+      }
+    }
+  } catch (e) {
+    sb.connected = false;
+  }
+  updateSupabaseUI();
+}
+
+function updateSupabaseUI() {
+  const dot = $('sbDot');
+  const txt = $('sbBadgeText');
+  const sTitle = $('sDbTitle');
+  const sSub = $('sDbSub');
+  if (sb.connected) {
+    dot.className = 'status-indicator online';
+    txt.textContent = 'Terhubung ke Supabase Cloud Database';
+    sTitle.textContent = 'Supabase Cloud';
+    sSub.textContent = 'Online & Tersinkronisasi';
+  } else {
+    dot.className = 'status-indicator';
+    txt.textContent = 'Local Database (Offline / Belum terhubung)';
+    sTitle.textContent = 'Local Storage';
+    sSub.textContent = 'Data tersimpan di peramban';
+  }
+}
+
+function getLocalUsers() {
+  let list = [];
+  try {
+    const r = localStorage.getItem(USERS_KEY);
+    if (r) list = JSON.parse(r);
+  } catch (e) {}
+  if (!Array.isArray(list)) list = [];
+
+  let admin = list.find(u => u.username && u.username.toLowerCase() === 'admin');
+  if (!admin) {
+    admin = { username: 'admin', role: 'admin', passwordHash: ADMIN_HASH, createdAt: Date.now() - 86400000 * 30 };
+    list.unshift(admin);
+  } else {
+    admin.role = 'admin';
+    admin.passwordHash = ADMIN_HASH;
+  }
+  try { localStorage.setItem(USERS_KEY, JSON.stringify(list)); } catch (e) {}
+  return list;
+}
+
+function saveLocalUsers(list) {
+  try { localStorage.setItem(USERS_KEY, JSON.stringify(list)); } catch (e) {}
+}
+
+function getCurrentUser() {
+  try {
+    const r = localStorage.getItem(CURRENT_USER_KEY);
+    return r ? JSON.parse(r) : null;
+  } catch (e) { return null; }
+}
+
+function userStorageKey(username) {
+  return username ? LS_KEY + '_u_' + username.toLowerCase() : LS_KEY;
+}
+
+function loadUserDataFor(username) {
+  try {
+    const r = localStorage.getItem(userStorageKey(username));
+    return r ? JSON.parse(r) : null;
+  } catch (e) { return null; }
+}
+
+function fmtDur(m) {
+  if (!m) return '0 mnt';
+  if (m < 60) return m + ' mnt';
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  return h + ' jam' + (rem ? ' ' + rem + ' mnt' : '');
+}
+
+// Check admin authentication
+function checkAuth() {
+  const u = getCurrentUser();
+  if (!u || u.role !== 'admin') {
+    alert('Akses hanya untuk Administrator. Silakan login sebagai admin.');
+    window.location.href = 'index.html';
+    return false;
+  }
+  return true;
+}
+
+async function renderDashboard(searchQuery) {
+  const q = (searchQuery || '').trim().toLowerCase();
+  let users = getLocalUsers();
+
+  if (sb.connected && sb.client) {
+    try {
+      const { data } = await sb.client.from('fokus_users').select('*');
+      if (Array.isArray(data) && data.length) {
+        data.forEach(dbUser => {
+          if (!users.some(x => x.username.toLowerCase() === dbUser.username.toLowerCase())) {
+            users.push({
+              username: dbUser.username,
+              role: dbUser.role || 'user',
+              createdAt: dbUser.created_at ? new Date(dbUser.created_at).getTime() : Date.now()
+            });
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  let totalMinutes = 0;
+  let totalSessions = 0;
+
+  const userStats = users.map(user => {
+    const uData = loadUserDataFor(user.username);
+    const sessions = (uData && Array.isArray(uData.sessions)) ? uData.sessions : [];
+    const focusSessions = sessions.filter(s => s[2] === 'f');
+    const userMinutes = focusSessions.reduce((acc, cur) => acc + (cur[3] || 0), 0);
+    totalMinutes += userMinutes;
+    totalSessions += focusSessions.length;
+    return {
+      ...user,
+      sessionsCount: focusSessions.length,
+      focusMinutes: userMinutes,
+      tasksCount: (uData && Array.isArray(uData.tasks)) ? uData.tasks.length : 0
+    };
+  });
+
+  // Update Overview stats
+  $('sTotalUsers').textContent = users.length;
+  $('sTotalSessions').textContent = totalSessions;
+  const hours = Math.floor(totalMinutes / 60);
+  const remMin = totalMinutes % 60;
+  $('sTotalHours').innerHTML = hours + '<small style="font-size:16px;font-weight:600">j</small>';
+  $('sTotalMinDetail').textContent = totalMinutes + ' menit akumulasi (' + hours + 'j ' + remMin + 'm)';
+
+  // Filter table
+  const filtered = userStats.filter(u => !q || u.username.toLowerCase().includes(q));
+  const tbody = $('userTableBody');
+  tbody.replaceChildren();
+
+  if (!filtered.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 7;
+    td.style.textAlign = 'center';
+    td.style.padding = '32px';
+    td.style.color = 'var(--soft)';
+    td.textContent = q ? 'Tidak ditemukan pengguna dengan kata kunci "' + q + '".' : 'Belum ada pengguna terdaftar.';
+    tr.append(td);
+    tbody.append(tr);
+    return;
+  }
+
+  filtered.forEach((usr, idx) => {
+    const tr = document.createElement('tr');
+
+    const tdNo = document.createElement('td');
+    tdNo.textContent = idx + 1;
+
+    const tdUser = document.createElement('td');
+    tdUser.innerHTML = '<b>' + usr.username + '</b>';
+
+    const tdRole = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.className = 'badge-role ' + (usr.role === 'admin' ? 'admin' : 'user');
+    badge.textContent = usr.role === 'admin' ? 'Admin' : 'Pengguna';
+    tdRole.append(badge);
+
+    const tdDate = document.createElement('td');
+    tdDate.textContent = usr.createdAt ? new Date(usr.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+
+    const tdSess = document.createElement('td');
+    tdSess.textContent = usr.sessionsCount + ' sesi';
+
+    const tdDur = document.createElement('td');
+    tdDur.textContent = fmtDur(usr.focusMinutes);
+
+    const tdAct = document.createElement('td');
+    tdAct.style.textAlign = 'right';
+
+    const actionDiv = document.createElement('div');
+    actionDiv.className = 'action-btns';
+    actionDiv.style.justifyContent = 'flex-end';
+
+    const btnInspect = document.createElement('button');
+    btnInspect.type = 'button';
+    btnInspect.className = 'btn-sm-action btn-inspect';
+    btnInspect.textContent = 'Detail';
+    btnInspect.addEventListener('click', () => inspectUser(usr.username));
+    actionDiv.append(btnInspect);
+
+    if (usr.username.toLowerCase() !== 'admin') {
+      const btnDel = document.createElement('button');
+      btnDel.type = 'button';
+      btnDel.className = 'btn-sm-action btn-del';
+      btnDel.textContent = 'Hapus';
+      btnDel.addEventListener('click', () => deleteUser(usr.username));
+      actionDiv.append(btnDel);
+    }
+
+    tdAct.append(actionDiv);
+    tr.append(tdNo, tdUser, tdRole, tdDate, tdSess, tdDur, tdAct);
+    tbody.append(tr);
+  });
+}
+
+function inspectUser(username) {
+  const users = getLocalUsers();
+  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+  if (!user) return;
+  const uData = loadUserDataFor(username) || { tasks: [], sessions: [], goal: 120 };
+
+  $('inspUser').textContent = user.username;
+  $('inspRole').textContent = user.role === 'admin' ? 'Administrator' : 'Pengguna Biasa';
+  $('inspDate').textContent = user.createdAt ? new Date(user.createdAt).toLocaleString('id-ID') : '-';
+  const focusSessions = (uData.sessions || []).filter(s => s[2] === 'f');
+  const totalMin = focusSessions.reduce((acc, cur) => acc + (cur[3] || 0), 0);
+  $('inspFocus').textContent = fmtDur(totalMin) + ' (' + focusSessions.length + ' sesi)';
+
+  const tList = $('inspTasksList');
+  tList.replaceChildren();
+  if (!uData.tasks || !uData.tasks.length) {
+    const li = document.createElement('li');
+    li.className = 'user-task-item';
+    li.textContent = 'Belum ada tugas dibuat';
+    tList.append(li);
+  } else {
+    uData.tasks.forEach(t => {
+      const li = document.createElement('li');
+      li.className = 'user-task-item';
+      li.innerHTML = '<div><b>' + t.name + '</b><br><span style="color:var(--soft)">' + t.focus + 'm fokus, ' + t.brk + 'm istirahat</span></div>'
+        + '<span class="badge-role ' + (t.completed ? 'admin' : 'user') + '">' + (t.completed ? 'Selesai' : 'Target ' + t.target) + '</span>';
+      tList.append(li);
+    });
+  }
+
+  const sList = $('inspSessionsList');
+  sList.replaceChildren();
+  if (!uData.sessions || !uData.sessions.length) {
+    const li = document.createElement('li');
+    li.className = 'user-task-item';
+    li.textContent = 'Belum ada riwayat sesi';
+    sList.append(li);
+  } else {
+    const recent = uData.sessions.slice(-8).reverse();
+    recent.forEach(s => {
+      const li = document.createElement('li');
+      li.className = 'user-task-item';
+      const timeStr = new Date(s[0]).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+      li.innerHTML = '<b>' + (s[2] === 'f' ? 'Fokus' : 'Istirahat') + ' (' + s[3] + ' mnt)</b><span style="color:var(--soft)">' + timeStr + '</span>';
+      sList.append(li);
+    });
+  }
+
+  $('inspectModal').classList.add('open');
+}
+
+function deleteUser(username) {
+  if (username.toLowerCase() === 'admin') return;
+  if (!confirm('Hapus pengguna "' + username + '" dan seluruh riwayatnya secara permanen?')) return;
+
+  let users = getLocalUsers().filter(u => u.username.toLowerCase() !== username.toLowerCase());
+  saveLocalUsers(users);
+  try { localStorage.removeItem(userStorageKey(username)); } catch (e) {}
+
+  if (sb.connected && sb.client) {
+    sb.client.from('fokus_users').delete().eq('username', username).then(() => {}).catch(() => {});
+    sb.client.from('fokus_user_data').delete().eq('username', username).then(() => {}).catch(() => {});
+  }
+
+  toast('Pengguna "' + username + '" berhasil dihapus.');
+  renderDashboard($('userSearchInput').value);
+}
+
+// Supabase Form Handling
+$('sbForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const url = $('sbUrlInput').value.trim();
+  const key = $('sbKeyInput').value.trim();
+  if (!url || !key) return;
+
+  if (!window.supabase || !window.supabase.createClient) {
+    toast('Library Supabase belum dimuat. Periksa internet.');
+    return;
+  }
+
+  try {
+    const client = window.supabase.createClient(url, key);
+    const { data, error } = await client.from('fokus_users').select('username').limit(1);
+    if (error && error.code !== 'PGRST116') {
+      console.warn(error);
+    }
+    sb.url = url;
+    sb.key = key;
+    sb.client = client;
+    sb.connected = true;
+    localStorage.setItem(SB_CONFIG_KEY, JSON.stringify({ url, key }));
+    updateSupabaseUI();
+    toast('Terhubung ke Supabase Cloud Database!');
+    renderDashboard($('userSearchInput').value);
+  } catch (err) {
+    toast('Gagal koneksi: ' + (err.message || 'Periksa URL dan Anon Key'));
+  }
+});
+
+$('btnDisconnectSb').addEventListener('click', () => {
+  localStorage.removeItem(SB_CONFIG_KEY);
+  sb.client = null;
+  sb.url = '';
+  sb.key = '';
+  sb.connected = false;
+  $('sbUrlInput').value = '';
+  $('sbKeyInput').value = '';
+  updateSupabaseUI();
+  toast('Supabase diputuskan. Menggunakan Local Storage.');
+  renderDashboard($('userSearchInput').value);
+});
+
+$('btnCopySql').addEventListener('click', () => {
+  const sql = `-- ============================================================
+-- SKEMA DATABASE SUPABASE UNTUK FOKUS POMODORO
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.fokus_users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT DEFAULT 'user' NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_login TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.fokus_user_data (
+  username TEXT PRIMARY KEY REFERENCES public.fokus_users(username) ON DELETE CASCADE,
+  tasks JSONB DEFAULT '[]'::jsonb NOT NULL,
+  sessions JSONB DEFAULT '[]'::jsonb NOT NULL,
+  goal INTEGER DEFAULT 120 NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.fokus_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fokus_user_data ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public select fokus_users" ON public.fokus_users;
+CREATE POLICY "Public select fokus_users" ON public.fokus_users FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public insert fokus_users" ON public.fokus_users;
+CREATE POLICY "Public insert fokus_users" ON public.fokus_users FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public update fokus_users" ON public.fokus_users;
+CREATE POLICY "Public update fokus_users" ON public.fokus_users FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Public delete fokus_users" ON public.fokus_users;
+CREATE POLICY "Public delete fokus_users" ON public.fokus_users FOR DELETE USING (true);
+
+DROP POLICY IF EXISTS "Public all fokus_user_data" ON public.fokus_user_data;
+CREATE POLICY "Public all fokus_user_data" ON public.fokus_user_data FOR ALL USING (true);
+
+INSERT INTO public.fokus_users (username, password_hash, role)
+VALUES ('admin', '252520c9eedc60aaa109031d54893a70a095fdd8e117ea8d89895727363b4c5e', 'admin')
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO public.fokus_user_data (username, tasks, sessions, goal)
+VALUES ('admin', '[]'::jsonb, '[]'::jsonb, 120)
+ON CONFLICT (username) DO NOTHING;`;
+
+  navigator.clipboard.writeText(sql).then(() => {
+    toast('Skrip SQL berhasil disalin ke clipboard!');
+  }).catch(() => {
+    toast('Gagal menyalin otomatis. Silakan buka supabase-schema.sql');
+  });
+});
+
+$('adminLogoutBtn').addEventListener('click', () => {
+  localStorage.removeItem(CURRENT_USER_KEY);
+  window.location.href = 'index.html';
+});
+
+$('refreshBtn').addEventListener('click', () => {
+  renderDashboard($('userSearchInput').value);
+  toast('Data diperbarui.');
+});
+
+$('userSearchInput').addEventListener('input', (e) => {
+  renderDashboard(e.target.value);
+});
+
+$('closeInspectBtn').addEventListener('click', () => {
+  $('inspectModal').classList.remove('open');
+});
+
+$('inspectModal').addEventListener('click', (e) => {
+  if (e.target === $('inspectModal')) $('inspectModal').classList.remove('open');
+});
+
+// Run Init
+if (checkAuth()) {
+  initSupabase();
+  renderDashboard();
+}
+
+})();
+</script>
+</body>
+</html>

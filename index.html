@@ -107,55 +107,80 @@ h1 .soft { color: var(--soft); }
 .col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 @media (max-width: 880px) { .cols { grid-template-columns: minmax(0, 1fr); } }
 
-.card { background: var(--surface); border-radius: var(--radius-card); padding: 22px; box-shadow: var(--shadow); min-width: 0; }
-.card--blue { background: var(--blue); color: var(--on-blue); --track: rgba(255, 255, 255, .24); --fill: #fff; box-shadow: 0 22px 40px -24px rgba(6, 99, 229, .8); }
+.card { background: var(--surface); border-radius: var(--radius-card); padding: 22px; box-shadow: var(--shadow); border: 1px solid var(--line); min-width: 0; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
 .card-title { font-weight: 700; font-size: 18px; letter-spacing: -.01em; margin: 0; }
 .muted { color: var(--muted); }
-.card--blue .muted { color: rgba(255, 255, 255, .78); }
 
-/* deck: kartu biru bertumpuk di belakang kartu timer */
-.deck { position: relative; isolation: isolate; padding-top: 28px; }
-.deck::before, .deck::after { content: ""; position: absolute; top: 0; height: 80px; border-radius: 34px; background: var(--blue); z-index: -1; }
-.deck::before { left: 11%; right: 11%; opacity: .30; filter: blur(2.5px); }
-.deck::after { left: 5.5%; right: 5.5%; top: 13px; opacity: .6; filter: blur(1.5px); }
+/* deck */
+.deck { position: relative; }
+.deck::before, .deck::after { display: none; }
 
 /* chips */
 .pills { display: flex; gap: 8px; flex-wrap: wrap; }
-.pill { padding: 9px 16px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); font-weight: 600; font-size: 13px; min-height: 42px; }
+.pill { padding: 9px 16px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-weight: 600; font-size: 13px; min-height: 42px; color: var(--ink); }
 .pill .cnt { margin-left: 6px; font-weight: 500; opacity: .55; }
 .pill[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: var(--on-blue); }
 .pill[aria-pressed="true"] .cnt { opacity: .85; }
-.card--blue .pill { background: rgba(255, 255, 255, .2); border-color: transparent; color: #fff; }
-.card--blue .pill[aria-pressed="true"] { background: #fff; color: var(--blue); }
 .periods { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .periods .pill { text-align: center; padding-inline: 6px; white-space: nowrap; }
 
-/* timer */
+/* timer card: Clean White Card */
+.timer-card {
+  background: var(--surface);
+  color: var(--ink);
+  --track: rgba(32, 34, 44, .08);
+  --fill: var(--blue);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+}
 .timer-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.now-task { font-size: 12px; color: rgba(255, 255, 255, .78); }
-.now-task b { color: #fff; font-size: 17px; font-weight: 700; letter-spacing: -.01em; display: block; }
+.now-task { font-size: 12px; color: var(--muted); }
+.now-task b { color: var(--ink); font-size: 17px; font-weight: 700; letter-spacing: -.01em; display: block; }
 .ring { position: relative; width: min(100%, 290px); aspect-ratio: 1; margin: 18px auto 10px; }
 .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-.ring .track { stroke: rgba(255, 255, 255, .22); }
-.ring .bar { stroke: #fff; transition: stroke-dashoffset .35s linear; }
+.ring .track { stroke: var(--track); }
+.ring .bar { stroke: var(--blue); transition: stroke-dashoffset .35s linear; }
 .ring-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 4px; }
-.clock { font-weight: 700; font-size: clamp(48px, 13vw, 66px); line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.ring-label { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .8); }
+.clock { font-weight: 800; font-size: clamp(48px, 13vw, 66px); line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.ring-label { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .controls { display: flex; align-items: center; justify-content: center; gap: 14px; }
-.round { width: 52px; height: 52px; border-radius: 50%; background: rgba(255, 255, 255, .2); display: grid; place-items: center; color: #fff; }
+.round { width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); display: grid; place-items: center; color: var(--ink); transition: transform .15s ease; }
+.round:hover { transform: scale(1.06); }
 .round svg { width: 20px; height: 20px; }
-.play { width: 78px; height: 78px; border-radius: 50%; background: #fff; color: var(--blue); display: grid; place-items: center; box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .5); }
+.play { width: 78px; height: 78px; border-radius: 50%; background: var(--blue); color: var(--on-blue); display: grid; place-items: center; box-shadow: 0 10px 24px -8px rgba(6, 99, 229, .5); transition: transform .15s ease; }
+.play:hover { transform: scale(1.06); }
 .play svg { width: 30px; height: 30px; }
 .cycle { display: flex; justify-content: center; gap: 6px; margin-top: 18px; }
-.cycle i { width: 24px; height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .24); }
-.cycle i.done { background: #fff; }
-.cycle-note { text-align: center; font-size: 12px; margin-top: 8px; }
+.cycle i { width: 24px; height: 8px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); }
+.cycle i.done { background: var(--blue); border-color: var(--blue); }
+.cycle-note { display: none; }
 
 /* tasks */
 .task-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.task { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 24px; background: var(--surface-2); transition: background .2s ease; }
-.task.active { background: var(--blue); color: var(--on-blue); }
+.task {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .02);
+  transition: all .2s ease;
+}
+.task:hover {
+  border-color: rgba(6, 99, 229, .3);
+  box-shadow: 0 4px 12px rgba(6, 99, 229, .06);
+}
+.task.active {
+  background: var(--surface);
+  border: 2px solid var(--blue);
+  box-shadow: 0 4px 18px rgba(6, 99, 229, .14);
+  color: var(--ink);
+}
+.task.active .task-name { color: var(--ink); }
 .task-check-btn {
   width: 36px; height: 36px; border-radius: 50%;
   border: 2px solid var(--soft); background: var(--surface); color: transparent;
@@ -167,37 +192,37 @@ h1 .soft { color: var(--soft); }
 .task-check-btn:hover svg { opacity: .45; transform: scale(.9); }
 .task-check-btn.checked { background: #10b981; border-color: #10b981; color: #fff; }
 .task-check-btn.checked svg { opacity: 1; transform: scale(1); }
-.task.active .task-check-btn { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .45); color: transparent; }
-.task.active .task-check-btn:hover { background: rgba(255, 255, 255, .32); border-color: #fff; color: #fff; transform: scale(1.08); }
+.task.active .task-check-btn { background: var(--surface); border-color: var(--soft); color: transparent; }
+.task.active .task-check-btn:hover { border-color: var(--blue); color: var(--blue); transform: scale(1.08); }
 .task.active .task-check-btn:hover svg { opacity: .75; transform: scale(.9); }
-.task.active .task-check-btn.checked { background: #fff; border-color: #fff; color: var(--blue); }
+.task.active .task-check-btn.checked { background: #10b981; border-color: #10b981; color: #fff; }
 .task.active .task-check-btn.checked svg { opacity: 1; transform: scale(1); }
 .task-main { text-align: left; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .task-name { font-weight: 700; letter-spacing: -.005em; overflow-wrap: anywhere; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .task.is-completed .task-name { text-decoration: line-through; opacity: .75; }
 .task-done-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: #10b981; color: #fff; text-decoration: none !important; }
-.task.active .task-done-badge { background: #fff; color: var(--blue); }
+.task.active .task-done-badge { background: #10b981; color: #fff; }
 .task-meta { font-size: 12px; opacity: .75; }
 .task-progress { display: flex; flex-direction: column; gap: 4px; margin: 1px 0; }
 .task-progress-track { width: 100%; height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; }
-.task.active .task-progress-track { background: rgba(255, 255, 255, .22); }
+.task.active .task-progress-track { background: var(--track); }
 .task-progress-fill { height: 100%; border-radius: 99px; background: var(--blue); width: 0%; transition: width .25s ease; }
-.task.active .task-progress-fill { background: #fff; }
+.task.active .task-progress-fill { background: var(--blue); }
 .task.is-completed .task-progress-fill { background: #10b981; }
-.task.active.is-completed .task-progress-fill { background: #fff; }
+.task.active.is-completed .task-progress-fill { background: #10b981; }
 .task-progress-info { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; line-height: 1.2; }
-.task-pct-badge { font-weight: 700; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 4px; }
-.task.active .task-pct-badge { color: #fff; }
+.task-pct-badge { font-weight: 700; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 4px; color: var(--blue); }
+.task.active .task-pct-badge { color: var(--blue); }
 .task-pct-detail { font-size: 11.5px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .dots { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
 .dots i { width: 10px; height: 10px; border-radius: 50%; background: transparent; border: 1.5px solid var(--soft); }
 .dots i.on { background: var(--blue); border-color: var(--blue); }
-.task.active .dots i { border-color: rgba(255, 255, 255, .6); }
-.task.active .dots i.on { background: #fff; border-color: #fff; }
+.task.active .dots i { border-color: var(--soft); }
+.task.active .dots i.on { background: var(--blue); border-color: var(--blue); }
 .dots span { font-size: 12px; margin-left: 4px; font-weight: 600; }
 .task-actions { display: flex; gap: 4px; }
-.mini { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--blue); }
-.task.active .mini { background: #fff; color: var(--blue); }
+.mini { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--blue); }
+.task.active .mini { background: var(--surface-2); color: var(--blue); }
 .mini svg { width: 17px; height: 17px; }
 .task-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -215,18 +240,18 @@ h1 .soft { color: var(--soft); }
 .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 560px) { .stats { grid-template-columns: minmax(0, 1fr); } }
 .stat { padding: 20px; border-radius: 28px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.stat--plain { background: var(--surface); box-shadow: var(--shadow); }
-.stat-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
-.stat-label svg { width: 15px; height: 15px; }
-.stat-big { font-weight: 700; font-size: 38px; line-height: 1.05; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.stat--plain { background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--line); }
+.stat-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--soft); }
+.stat-label svg { width: 15px; height: 15px; color: var(--blue); }
+.stat-big { font-weight: 700; font-size: 38px; line-height: 1.05; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--ink); }
 .stat-big small { font-size: 16px; font-weight: 600; margin-left: 4px; letter-spacing: 0; }
 .stat-note { font-size: 12px; }
 .goal { margin-top: 6px; }
-.goal-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
-.goal-row input { width: 64px; height: 26px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, .4); background: rgba(255, 255, 255, .18); padding: 0 8px; font-weight: 700; color: #fff; }
-.goal-dots { display: flex; gap: 3px; background: rgba(255, 255, 255, .18); border-radius: 99px; padding: 4px; }
-.goal-dots i { flex: 1; height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .22); }
-.goal-dots i.on { background: #fff; }
+.goal-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+.goal-row input { width: 64px; height: 26px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface-2); padding: 0 8px; font-weight: 700; color: var(--ink); }
+.goal-dots { display: flex; gap: 3px; background: var(--surface-2); border-radius: 99px; padding: 4px; border: 1px solid var(--line); }
+.goal-dots i { flex: 1; height: 8px; border-radius: 99px; background: rgba(0, 0, 0, .08); }
+.goal-dots i.on { background: var(--blue); }
 .share { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 .share-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; font-size: 12px; font-weight: 500; }
 .share-row span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -413,6 +438,47 @@ img { max-width: 100%; }
 /* Foot bar */
 .foot-bar { margin-top: 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .btn-sm { height: 38px; padding: 0 16px; font-size: 12.5px; }
+
+/* Toast & Auth Alert */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1e293b;
+  color: #ffffff;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 2000;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.auth-alert {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.auth-alert.error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+.auth-alert.success {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
 </style>
 </head>
 <body>
@@ -455,13 +521,12 @@ img { max-width: 100%; }
 
   <section>
     <h1>Atur waktu tiap tugas, <span class="soft">pantau progresmu.</span></h1>
-    <p class="sub">Setiap tugas punya durasi fokus dan istirahat sendiri. Selesaikan sesi, lalu lihat totalnya per hari, minggu, bulan, dan tahun.</p>
   </section>
 
   <div class="cols">
     <div class="col">
       <div class="deck">
-      <section class="card card--blue" aria-label="Timer">
+      <section class="card timer-card" aria-label="Timer">
         <div class="timer-top">
           <div class="now-task">Sedang dikerjakan<b id="nowTask">-</b></div>
           <div class="pills" role="group" aria-label="Mode timer">
@@ -485,7 +550,6 @@ img { max-width: 100%; }
           <button type="button" class="round" id="skipBtn" aria-label="Lewati sesi"><svg aria-hidden="true"><use href="#i-skip"/></svg></button>
         </div>
         <div class="cycle" id="cycle" aria-hidden="true"></div>
-        <div class="cycle-note muted" id="cycleNote"></div>
       </section>
       </div>
 
@@ -520,7 +584,7 @@ img { max-width: 100%; }
       </div>
 
       <div class="stats">
-        <div class="stat card--blue">
+        <div class="stat stat--plain">
           <div class="stat-label"><svg id="deltaIcon" aria-hidden="true"><use href="#i-up"/></svg> Waktu fokus</div>
           <div class="stat-big" id="sFocus">0<small>mnt</small></div>
           <div class="stat-note muted" id="sDelta"></div>
@@ -559,7 +623,6 @@ img { max-width: 100%; }
       <input type="file" id="importFile" accept=".json,application/json" hidden>
       <button type="button" class="btn blue btn-sm" id="installBtn" hidden>Pasang aplikasi</button>
     </div>
-    <p class="foot" id="saveNote"></p>
   </footer>
 </div>
 
@@ -575,6 +638,7 @@ img { max-width: 100%; }
         <button type="button" class="auth-tab active" id="tabLogin" role="tab" aria-selected="true">Masuk</button>
         <button type="button" class="auth-tab" id="tabRegister" role="tab" aria-selected="false">Daftar Akun</button>
       </div>
+      <div id="authAlert" class="auth-alert" style="display:none"></div>
       <form id="authForm" autocomplete="off">
         <div class="field wide" style="margin-bottom:12px">
           <label for="authUsername">Username</label>
@@ -586,13 +650,10 @@ img { max-width: 100%; }
         </div>
         <button type="submit" class="btn blue" id="authSubmit" style="width:100%;height:46px">Masuk ke Akun</button>
       </form>
-      <div class="auth-note">
-        🔒 <b>Keamanan Terjamin</b>: Password di-hash dengan enkripsi <b>SHA-256</b> sebelum disimpan, sehingga aman dan terlindungi.<br>
-        🛡️ <b>Akun Admin Default</b>: <code>admin</code> / password: <code>admin123</code>
-      </div>
     </div>
   </div>
 </div>
+<div class="toast" id="toastMsg"></div>
 
 <!-- Modal Dashboard Admin -->
 <div class="modal-overlay" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
@@ -795,21 +856,51 @@ const CURRENT_USER_KEY = 'fokus_current_user_v2';
 const SB_CONFIG_KEY = 'fokus_supabase_config_v2';
 const ADMIN_HASH = '252520c9eedc60aaa109031d54893a70a095fdd8e117ea8d89895727363b4c5e'; // admin123:fokus_salt_2026
 
-async function hashPassword(str) {
-  const salted = str + ':fokus_salt_2026';
-  if (window.crypto && crypto.subtle) {
-    try {
-      const buf = new TextEncoder().encode(salted);
-      const digest = await crypto.subtle.digest('SHA-256', buf);
-      return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch (e) {}
+function sha256Sync(ascii) {
+  function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+  const mathPow = Math.pow; const maxWord = mathPow(2, 32); let i, j; let result = '';
+  const words = []; const asciiBitLength = ascii.length * 8; let hash = []; let k = []; let primeCounter = 0;
+  const isComposite = {};
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
   }
-  let hash = 0;
-  for (let i = 0; i < salted.length; i++) {
-    hash = ((hash << 5) - hash) + salted.charCodeAt(i);
-    hash |= 0;
+  ascii += '\x80';
+  while (ascii.length % 64 - 56) ascii += '\x00';
+  for (i = 0; i < ascii.length; i++) {
+    j = ascii.charCodeAt(i);
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
   }
-  return Math.abs(hash).toString(16).padStart(64, '0');
+  words[words.length] = ((asciiBitLength / maxWord) | 0);
+  words[words.length] = (asciiBitLength | 0);
+  for (j = 0; j < words.length;) {
+    const w = words.slice(j, j += 16);
+    const oldHash = hash;
+    hash = hash.slice(0, 8);
+    for (i = 0; i < 64; i++) {
+      const w15 = w[i - 15], w2 = w[i - 2];
+      const a = hash[0], e = hash[4];
+      const temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ ((~e) & hash[6])) + k[i] + (w[i] = (i < 16) ? w[i] : (w[i - 16] + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0].concat(hash);
+      hash[4] = (hash[4] + temp1) | 0;
+    }
+    for (i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+  }
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j >= 0; j--) {
+      const b = (hash[i] >> (8 * j)) & 255;
+      result += (b < 16 ? '0' : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+function hashPassword(str) {
+  return sha256Sync(str + ':fokus_salt_2026');
 }
 
 const sb = { client: null, url: '', key: '', connected: false };
@@ -848,21 +939,23 @@ function initSupabase() {
 }
 
 function getLocalUsers() {
+  let list = [];
   try {
     const r = localStorage.getItem(USERS_KEY);
-    let list = r ? JSON.parse(r) : null;
-    if (!Array.isArray(list) || !list.length) {
-      list = [{ username: 'admin', role: 'admin', passwordHash: ADMIN_HASH, createdAt: Date.now() - 86400000 * 30 }];
-      localStorage.setItem(USERS_KEY, JSON.stringify(list));
-    }
-    if (!list.some(u => u.username === 'admin')) {
-      list.unshift({ username: 'admin', role: 'admin', passwordHash: ADMIN_HASH, createdAt: Date.now() - 86400000 * 30 });
-      localStorage.setItem(USERS_KEY, JSON.stringify(list));
-    }
-    return list;
-  } catch (e) {
-    return [{ username: 'admin', role: 'admin', passwordHash: ADMIN_HASH, createdAt: Date.now() }];
+    if (r) list = JSON.parse(r);
+  } catch (e) {}
+  if (!Array.isArray(list)) list = [];
+
+  let admin = list.find(u => u.username && u.username.toLowerCase() === 'admin');
+  if (!admin) {
+    admin = { username: 'admin', role: 'admin', passwordHash: ADMIN_HASH, createdAt: Date.now() - 86400000 * 30 };
+    list.unshift(admin);
+  } else {
+    admin.role = 'admin';
+    admin.passwordHash = ADMIN_HASH;
   }
+  try { localStorage.setItem(USERS_KEY, JSON.stringify(list)); } catch (e) {}
+  return list;
 }
 
 function saveLocalUsers(list) {
@@ -907,6 +1000,19 @@ function saveUserDataFor(username, data) {
   } catch (e) {}
 }
 
+function setAuthAlert(msg, type) {
+  const el = $('authAlert');
+  if (!el) return;
+  if (!msg) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+  el.className = 'auth-alert ' + (type || 'error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
 function renderAuthUI() {
   const area = $('authArea');
   if (!area) return;
@@ -924,7 +1030,7 @@ function renderAuthUI() {
     const name = h('span', '', [u.username]);
     const btnDash = h('button', 'btn-admin-dash', ['Dashboard']);
     btnDash.type = 'button';
-    btnDash.addEventListener('click', openAdminDashboard);
+    btnDash.addEventListener('click', () => { window.location.href = 'admin.html'; });
     const btnOut = h('button', 'btn-logout', ['Keluar']);
     btnOut.type = 'button';
     btnOut.addEventListener('click', logout);
@@ -961,9 +1067,11 @@ function lsSave() {
 let state = normalize(lsLoad() || demoState());
 
 function setNote(mode) {
-  $('saveNote').textContent = sb.connected
-    ? 'Tersinkronisasi dengan Database Supabase Cloud.'
-    : 'Tersimpan di perangkat lokal ini dengan aman.';
+  if ($('saveNote')) {
+    $('saveNote').textContent = sb.connected
+      ? 'Tersinkronisasi dengan Database Supabase Cloud.'
+      : 'Tersimpan di perangkat lokal ini dengan aman.';
+  }
 }
 function snapshot() {
   return { v: 1, tasks: state.tasks, sessions: state.sessions, goal: state.goal, activeId: state.activeId, demo: !!state.demo, period: state.period, names: state.names };
@@ -988,12 +1096,13 @@ function initStore() {
 }
 
 async function login(username, password) {
+  setAuthAlert('');
   username = username.trim().toLowerCase();
   if (!username || !password) {
-    flash('Masukkan username dan password.');
+    setAuthAlert('Masukkan username dan password.', 'error');
     return;
   }
-  const hashed = await hashPassword(password);
+  const hashed = hashPassword(password);
 
   // 1. Cek Supabase jika terhubung
   if (sb.connected && sb.client) {
@@ -1018,8 +1127,12 @@ async function login(username, password) {
           state = normalize(loadUserDataFor(username) || (username === 'admin' ? { tasks: [], sessions: [], goal: 120 } : demoState()));
         }
         applyState();
-        closeAuthModal();
-        flash('Berhasil masuk sebagai ' + u.username + '!');
+        setAuthAlert('Berhasil masuk!', 'success');
+        setTimeout(() => {
+          closeAuthModal();
+          flash('Selamat datang, ' + u.username + '!');
+          if (u.role === 'admin') window.location.href = 'admin.html';
+        }, 350);
         return;
       }
     } catch (e) {}
@@ -1029,7 +1142,7 @@ async function login(username, password) {
   const users = getLocalUsers();
   const found = users.find(x => x.username.toLowerCase() === username && x.passwordHash === hashed);
   if (!found) {
-    flash('Username atau password salah.');
+    setAuthAlert('Username atau password salah.', 'error');
     return;
   }
   const u = { username: found.username, role: found.role || 'user' };
@@ -1037,28 +1150,33 @@ async function login(username, password) {
   const uData = loadUserDataFor(found.username);
   state = normalize(uData || (found.username === 'admin' ? { tasks: [], sessions: [], goal: 120 } : demoState()));
   applyState();
-  closeAuthModal();
-  flash('Selamat datang kembali, ' + found.username + '!');
+  setAuthAlert('Berhasil masuk!', 'success');
+  setTimeout(() => {
+    closeAuthModal();
+    flash('Selamat datang kembali, ' + found.username + '!');
+    if (u.role === 'admin') window.location.href = 'admin.html';
+  }, 350);
 }
 
 async function register(username, password) {
+  setAuthAlert('');
   username = username.trim().toLowerCase();
   if (!username || username.length < 3) {
-    flash('Username minimal 3 karakter.');
+    setAuthAlert('Username minimal 3 karakter.', 'error');
     return;
   }
   if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-    flash('Username hanya boleh berisi huruf, angka, dan underscore.');
+    setAuthAlert('Username hanya boleh huruf, angka, dan underscore.', 'error');
     return;
   }
   if (!password || password.length < 4) {
-    flash('Password minimal 4 karakter.');
+    setAuthAlert('Password minimal 4 karakter.', 'error');
     return;
   }
-  const hashed = await hashPassword(password);
+  const hashed = hashPassword(password);
   const users = getLocalUsers();
   if (users.some(x => x.username.toLowerCase() === username)) {
-    flash('Username sudah digunakan. Silakan pilih username lain.');
+    setAuthAlert('Username sudah digunakan. Silakan pilih username lain.', 'error');
     return;
   }
 
@@ -1093,8 +1211,11 @@ async function register(username, password) {
   state = normalize({ tasks: [], sessions: [], goal: 120, names: {} });
   saveUserDataFor(username, snapshot());
   applyState();
-  closeAuthModal();
-  flash('Akun ' + username + ' berhasil dibuat dan otomatis masuk!');
+  setAuthAlert('Akun berhasil dibuat!', 'success');
+  setTimeout(() => {
+    closeAuthModal();
+    flash('Selamat datang, ' + username + '!');
+  }, 350);
 }
 
 function logout() {
@@ -1112,8 +1233,7 @@ async function openAdminDashboard() {
     flash('Akses ditolak: Hanya admin yang dapat membuka dashboard ini.');
     return;
   }
-  $('adminModal').classList.add('open');
-  await renderAdminDashboard('');
+  window.location.href = 'admin.html';
 }
 
 async function renderAdminDashboard(filter) {
@@ -1421,14 +1541,18 @@ function renderTimer() {
   const cy = $('cycle');
   cy.replaceChildren();
   for (let i = 0; i < LONG_EVERY; i++) { const d = document.createElement('i'); if (i < done) d.className = 'done'; cy.append(d); }
-  $('cycleNote').textContent = 'Istirahat panjang ' + LONG_MIN + ' mnt setelah sesi fokus ke-' + LONG_EVERY;
+  if ($('cycleNote')) $('cycleNote').textContent = '';
   document.title = timer.running ? fmtClock(timer.left) + ' - ' + modeLabel() : 'Fokus Lime';
   updateLiveProgress();
 }
 function flash(msg) {
-  $('saveNote').textContent = msg;
-  clearTimeout(flash.t);
-  flash.t = setTimeout(() => setNote(store.doc ? 'db' : 'local'), 2600);
+  const t = $('toastMsg');
+  if (t) {
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(flash.t);
+    flash.t = setTimeout(() => t.classList.remove('show'), 2400);
+  }
 }
 function tick() {
   timer.left = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
@@ -1947,6 +2071,7 @@ function openAuthModal(mode) {
   authMode = mode || 'login';
   $('authUsername').value = '';
   $('authPassword').value = '';
+  setAuthAlert('');
   syncAuthTabs();
   $('authModal').classList.add('open');
   $('authUsername').focus();
@@ -1954,6 +2079,7 @@ function openAuthModal(mode) {
 
 function closeAuthModal() {
   $('authModal').classList.remove('open');
+  setAuthAlert('');
 }
 
 function syncAuthTabs() {
@@ -1963,8 +2089,8 @@ function syncAuthTabs() {
   $('authSubmit').textContent = authMode === 'login' ? 'Masuk ke Akun' : 'Daftar Sekarang';
 }
 
-$('tabLogin').addEventListener('click', () => { authMode = 'login'; syncAuthTabs(); });
-$('tabRegister').addEventListener('click', () => { authMode = 'register'; syncAuthTabs(); });
+$('tabLogin').addEventListener('click', () => { authMode = 'login'; setAuthAlert(''); syncAuthTabs(); });
+$('tabRegister').addEventListener('click', () => { authMode = 'register'; setAuthAlert(''); syncAuthTabs(); });
 $('authForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const usn = $('authUsername').value.trim();
