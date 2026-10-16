@@ -2026,8 +2026,10 @@ $('themeLight').addEventListener('click', () => setTheme('light'));
 $('themeDark').addEventListener('click', () => setTheme('dark'));
 try {
   const th = localStorage.getItem(LS_THEME);
+  // Default: light mode. Hanya ikut localStorage jika sudah pernah dipilih manual.
   if (th === 'dark' || th === 'light') rootEl.setAttribute('data-theme', th);
-} catch (e) { /* abaikan */ }
+  else rootEl.setAttribute('data-theme', 'light');
+} catch (e) { rootEl.setAttribute('data-theme', 'light'); }
 if (systemDark.addEventListener) systemDark.addEventListener('change', syncTheme);
 syncTheme();
 
