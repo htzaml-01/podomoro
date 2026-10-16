@@ -39,7 +39,7 @@ CREATE POLICY "Public update fokus_users" ON public.fokus_users FOR UPDATE USING
 DROP POLICY IF EXISTS "Public delete fokus_users" ON public.fokus_users;
 CREATE POLICY "Public delete fokus_users" ON public.fokus_users FOR DELETE USING (true);
 
-DROP POLICY IF EXISTS "Public all fokus_user_data" ON public.fokus_user_data FOR ALL USING (true);
+DROP POLICY IF EXISTS "Public all fokus_user_data" ON public.fokus_user_data;
 CREATE POLICY "Public all fokus_user_data" ON public.fokus_user_data FOR ALL USING (true);
 
 -- 4. Akun Admin Default (usn: admin, pw: admin123)
