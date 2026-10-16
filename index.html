@@ -352,9 +352,9 @@ img { max-width: 100%; }
 }
 .modal-overlay.open { opacity: 1; pointer-events: auto; }
 #authModal {
-  background: rgba(13, 16, 23, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 .modal-card {
   background: var(--surface); color: var(--ink);
@@ -647,7 +647,7 @@ img { max-width: 100%; }
       <form id="authForm" autocomplete="off">
         <div class="field wide" style="margin-bottom:12px">
           <label for="authUsername">Username</label>
-          <input type="text" id="authUsername" placeholder="Contoh: azzam atau admin" required minlength="3" maxlength="30" autocomplete="username">
+          <input type="text" id="authUsername" placeholder="Username" required minlength="3" maxlength="30" autocomplete="username">
         </div>
         <div class="field wide" style="margin-bottom:16px">
           <label for="authPassword">Password</label>
