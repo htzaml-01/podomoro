@@ -1,0 +1,2007 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fokus Pomodoro</title>
+<meta name="description" content="Timer Pomodoro dengan durasi per tugas dan analisis progres.">
+<meta name="theme-color" content="#0663e5">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fokus">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* Layout: dua kolom. Kiri = dek kartu timer biru bertumpuk + daftar tugas. Kanan = analisis (chip periode, kartu statistik, grafik blok, aktivitas). Satu kolom di layar sempit. */
+:root {
+  --bg: #e8e9ee;
+  --glow-1: rgba(255, 255, 255, .95);
+  --glow-2: rgba(255, 255, 255, .55);
+  --surface: #ffffff;
+  --surface-2: #f0f1f4;
+  --chip: rgba(255, 255, 255, .62);
+  --ink: #2c2d32;
+  --soft: #8c8e96;
+  --muted: #6c6f78;
+  --line: rgba(32, 34, 44, .10);
+  --blue: #0663e5;
+  --blue-soft: #6ea1f2;
+  --blue-tint: #dce8fd;
+  --on-blue: #ffffff;
+  --block-dark: #3a3c44;
+  --danger: #d6452f;
+  --font-display: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius-card: 32px;
+  --shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 14px 34px -22px rgba(30, 36, 60, .45);
+  --track: rgba(32, 34, 44, .10);
+  --fill: var(--blue);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1017; --glow-1: rgba(47, 124, 240, .16); --glow-2: rgba(47, 124, 240, .08);
+    --surface: #171b24; --surface-2: #212633; --chip: rgba(255, 255, 255, .07);
+    --ink: #eceef4; --soft: #7f879a; --muted: #99a1b4; --line: rgba(236, 238, 244, .12);
+    --blue: #2f7cf0; --blue-tint: #1c2b49; --block-dark: #6b7487; --danger: #ff7a63;
+    --shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 14px 34px -22px rgba(0, 0, 0, .9);
+    --track: rgba(236, 238, 244, .12);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1017; --glow-1: rgba(47, 124, 240, .16); --glow-2: rgba(47, 124, 240, .08);
+  --surface: #171b24; --surface-2: #212633; --chip: rgba(255, 255, 255, .07);
+  --ink: #eceef4; --soft: #7f879a; --muted: #99a1b4; --line: rgba(236, 238, 244, .12);
+  --blue: #2f7cf0; --blue-tint: #1c2b49; --block-dark: #6b7487; --danger: #ff7a63;
+  --shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 14px 34px -22px rgba(0, 0, 0, .9);
+  --track: rgba(236, 238, 244, .12);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background-color: var(--bg); color: var(--ink);
+  background-image:
+    radial-gradient(900px 520px at 12% -8%, var(--glow-1), transparent 62%),
+    radial-gradient(820px 520px at 100% 28%, var(--glow-2), transparent 60%);
+  background-repeat: no-repeat;
+  font-family: var(--font-body); font-size: 14px; line-height: 1.5;
+  padding-block: 20px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.card--blue :focus-visible { outline-color: #fff; }
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* top bar */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
+.brand svg { width: 34px; height: 34px; padding: 6px; border-radius: 50%; background: var(--chip); border: 1px solid var(--line); color: var(--blue); }
+.top-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); font-size: 12px; font-weight: 600; }
+.chip button { background: var(--blue); color: var(--on-blue); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600; }
+.icon-pill { width: 44px; height: 44px; border-radius: 50%; background: var(--chip); border: 1px solid var(--line); color: var(--blue); display: grid; place-items: center; }
+.icon-pill svg { width: 20px; height: 20px; }
+h1 { margin: 0; font-weight: 700; font-size: clamp(30px, 5vw, 48px); line-height: 1.1; letter-spacing: -.025em; text-wrap: balance; max-width: 16ch; }
+h1 .soft { color: var(--soft); }
+.sub { margin: 10px 0 0; color: var(--muted); max-width: 52ch; }
+
+.theme-switch { display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); }
+.theme-switch button { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.theme-switch button svg { width: 16px; height: 16px; }
+.theme-switch button[aria-pressed="true"] { background: var(--blue); color: var(--on-blue); }
+@media (max-width: 420px) { .theme-switch button { padding: 0 11px; } }
+
+/* grid */
+.cols { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+@media (max-width: 880px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+
+.card { background: var(--surface); border-radius: var(--radius-card); padding: 22px; box-shadow: var(--shadow); min-width: 0; }
+.card--blue { background: var(--blue); color: var(--on-blue); --track: rgba(255, 255, 255, .24); --fill: #fff; box-shadow: 0 22px 40px -24px rgba(6, 99, 229, .8); }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.card-title { font-weight: 700; font-size: 18px; letter-spacing: -.01em; margin: 0; }
+.muted { color: var(--muted); }
+.card--blue .muted { color: rgba(255, 255, 255, .78); }
+
+/* deck: kartu biru bertumpuk di belakang kartu timer */
+.deck { position: relative; isolation: isolate; padding-top: 28px; }
+.deck::before, .deck::after { content: ""; position: absolute; top: 0; height: 80px; border-radius: 34px; background: var(--blue); z-index: -1; }
+.deck::before { left: 11%; right: 11%; opacity: .30; filter: blur(2.5px); }
+.deck::after { left: 5.5%; right: 5.5%; top: 13px; opacity: .6; filter: blur(1.5px); }
+
+/* chips */
+.pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { padding: 9px 16px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); font-weight: 600; font-size: 13px; min-height: 42px; }
+.pill .cnt { margin-left: 6px; font-weight: 500; opacity: .55; }
+.pill[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: var(--on-blue); }
+.pill[aria-pressed="true"] .cnt { opacity: .85; }
+.card--blue .pill { background: rgba(255, 255, 255, .2); border-color: transparent; color: #fff; }
+.card--blue .pill[aria-pressed="true"] { background: #fff; color: var(--blue); }
+.periods { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.periods .pill { text-align: center; padding-inline: 6px; white-space: nowrap; }
+
+/* timer */
+.timer-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.now-task { font-size: 12px; color: rgba(255, 255, 255, .78); }
+.now-task b { color: #fff; font-size: 17px; font-weight: 700; letter-spacing: -.01em; display: block; }
+.ring { position: relative; width: min(100%, 290px); aspect-ratio: 1; margin: 18px auto 10px; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .track { stroke: rgba(255, 255, 255, .22); }
+.ring .bar { stroke: #fff; transition: stroke-dashoffset .35s linear; }
+.ring-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 4px; }
+.clock { font-weight: 700; font-size: clamp(48px, 13vw, 66px); line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.ring-label { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .8); }
+.controls { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.round { width: 52px; height: 52px; border-radius: 50%; background: rgba(255, 255, 255, .2); display: grid; place-items: center; color: #fff; }
+.round svg { width: 20px; height: 20px; }
+.play { width: 78px; height: 78px; border-radius: 50%; background: #fff; color: var(--blue); display: grid; place-items: center; box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .5); }
+.play svg { width: 30px; height: 30px; }
+.cycle { display: flex; justify-content: center; gap: 6px; margin-top: 18px; }
+.cycle i { width: 24px; height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .24); }
+.cycle i.done { background: #fff; }
+.cycle-note { text-align: center; font-size: 12px; margin-top: 8px; }
+
+/* tasks */
+.task-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.task { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 24px; background: var(--surface-2); transition: background .2s ease; }
+.task.active { background: var(--blue); color: var(--on-blue); }
+.task-check-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 2px solid var(--soft); background: var(--surface); color: transparent;
+  display: grid; place-items: center; flex-shrink: 0; cursor: pointer; padding: 0;
+  transition: all .2s cubic-bezier(.34, 1.56, .64, 1);
+}
+.task-check-btn svg { width: 20px; height: 20px; opacity: 0; transform: scale(0.6); transition: transform .2s ease, opacity .2s ease; }
+.task-check-btn:hover { border-color: var(--blue); color: var(--blue); transform: scale(1.08); }
+.task-check-btn:hover svg { opacity: .45; transform: scale(.9); }
+.task-check-btn.checked { background: #10b981; border-color: #10b981; color: #fff; }
+.task-check-btn.checked svg { opacity: 1; transform: scale(1); }
+.task.active .task-check-btn { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .45); color: transparent; }
+.task.active .task-check-btn:hover { background: rgba(255, 255, 255, .32); border-color: #fff; color: #fff; transform: scale(1.08); }
+.task.active .task-check-btn:hover svg { opacity: .75; transform: scale(.9); }
+.task.active .task-check-btn.checked { background: #fff; border-color: #fff; color: var(--blue); }
+.task.active .task-check-btn.checked svg { opacity: 1; transform: scale(1); }
+.task-main { text-align: left; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.task-name { font-weight: 700; letter-spacing: -.005em; overflow-wrap: anywhere; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.task.is-completed .task-name { text-decoration: line-through; opacity: .75; }
+.task-done-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: #10b981; color: #fff; text-decoration: none !important; }
+.task.active .task-done-badge { background: #fff; color: var(--blue); }
+.task-meta { font-size: 12px; opacity: .75; }
+.task-progress { display: flex; flex-direction: column; gap: 4px; margin: 1px 0; }
+.task-progress-track { width: 100%; height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.task.active .task-progress-track { background: rgba(255, 255, 255, .22); }
+.task-progress-fill { height: 100%; border-radius: 99px; background: var(--blue); width: 0%; transition: width .25s ease; }
+.task.active .task-progress-fill { background: #fff; }
+.task.is-completed .task-progress-fill { background: #10b981; }
+.task.active.is-completed .task-progress-fill { background: #fff; }
+.task-progress-info { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; line-height: 1.2; }
+.task-pct-badge { font-weight: 700; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 4px; }
+.task.active .task-pct-badge { color: #fff; }
+.task-pct-detail { font-size: 11.5px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.dots { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.dots i { width: 10px; height: 10px; border-radius: 50%; background: transparent; border: 1.5px solid var(--soft); }
+.dots i.on { background: var(--blue); border-color: var(--blue); }
+.task.active .dots i { border-color: rgba(255, 255, 255, .6); }
+.task.active .dots i.on { background: #fff; border-color: #fff; }
+.dots span { font-size: 12px; margin-left: 4px; font-weight: 600; }
+.task-actions { display: flex; gap: 4px; }
+.mini { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--blue); }
+.task.active .mini { background: #fff; color: var(--blue); }
+.mini svg { width: 17px; height: 17px; }
+.task-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field.wide { grid-column: 1 / -1; }
+.field label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.field input { width: 100%; height: 46px; padding: 0 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); }
+.form-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { height: 46px; padding: 0 22px; border-radius: 999px; font-weight: 600; background: var(--ink); color: var(--bg); }
+.btn.blue { background: var(--blue); color: var(--on-blue); }
+.btn.ghost { background: var(--surface-2); color: var(--ink); }
+.empty { padding: 18px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 22px; }
+@media (max-width: 420px) { .task-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* analytics */
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .stats { grid-template-columns: minmax(0, 1fr); } }
+.stat { padding: 20px; border-radius: 28px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.stat--plain { background: var(--surface); box-shadow: var(--shadow); }
+.stat-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+.stat-label svg { width: 15px; height: 15px; }
+.stat-big { font-weight: 700; font-size: 38px; line-height: 1.05; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.stat-big small { font-size: 16px; font-weight: 600; margin-left: 4px; letter-spacing: 0; }
+.stat-note { font-size: 12px; }
+.goal { margin-top: 6px; }
+.goal-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.goal-row input { width: 64px; height: 26px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, .4); background: rgba(255, 255, 255, .18); padding: 0 8px; font-weight: 700; color: #fff; }
+.goal-dots { display: flex; gap: 3px; background: rgba(255, 255, 255, .18); border-radius: 99px; padding: 4px; }
+.goal-dots i { flex: 1; height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .22); }
+.goal-dots i.on { background: #fff; }
+.share { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.share-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; font-size: 12px; font-weight: 500; }
+.share-row span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.share-bar { grid-column: 1 / -1; height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.share-bar i { display: block; height: 100%; background: var(--fill); border-radius: 99px; }
+
+/* chart: setiap blok = satu sesi */
+.chart-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.total { font-weight: 700; font-size: 28px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 4px; background: var(--blue); }
+.legend i.dk { background: var(--block-dark); }
+.chart { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 6px; height: 240px; }
+.yaxis { display: flex; flex-direction: column-reverse; justify-content: space-between; font-size: 11px; color: var(--muted); padding-bottom: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+.plot { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; align-items: end; border-bottom: 1px solid var(--line); }
+.col-bar { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; position: relative; }
+.stack { display: flex; flex-direction: column-reverse; gap: 3px; width: min(100%, 34px); height: calc(100% - 22px); justify-content: flex-start; }
+.stack b { display: block; width: 100%; flex: 0 0 calc((100% - (var(--n, 6) - 1) * 3px) / var(--n, 6)); border-radius: 6px; background: var(--blue); }
+.stack b.dk { background: var(--block-dark); }
+.xlab { height: 22px; font-size: 11px; color: var(--muted); display: grid; place-items: center; white-space: nowrap; }
+.col-bar:hover .tip, .col-bar:focus .tip, .col-bar.show .tip { display: block; }
+.tip { display: none; position: absolute; top: 0; z-index: 2; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); border-radius: 10px; padding: 4px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; }
+
+/* activity */
+.acts { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.act { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.act:last-child { border-bottom: 0; }
+.act-ico { width: 40px; height: 40px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; }
+.act-ico.brk { background: var(--blue-tint); color: var(--blue); }
+.act-ico svg { width: 18px; height: 18px; }
+.act-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act-time { font-size: 12px; color: var(--muted); }
+.act-min { font-weight: 700; font-variant-numeric: tabular-nums; }
+.foot { text-align: center; font-size: 12px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .ring .bar { transition: none; } }
+
+/* aplikasi mandiri */
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); -webkit-text-size-adjust: 100%; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+.chip-btn { height: 44px; padding: 0 18px; border-radius: 999px; background: var(--blue); color: var(--on-blue); font-weight: 600; }
+.foot-row { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.foot-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+/* auth, admin & modals */
+.user-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 6px 4px 12px; border-radius: 999px;
+  background: var(--chip); border: 1px solid var(--line);
+  font-size: 13px; font-weight: 600;
+}
+.user-chip.admin {
+  border-color: #f59e0b; background: rgba(245, 158, 11, 0.12);
+}
+.badge-admin {
+  background: #f59e0b; color: #fff; font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em;
+}
+.btn-auth {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--blue); color: var(--on-blue);
+  height: 38px; padding: 0 16px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; transition: transform .15s, opacity .15s;
+}
+.btn-auth:hover { transform: scale(1.03); opacity: .95; }
+.btn-admin-dash {
+  background: var(--blue); color: var(--on-blue);
+  height: 28px; padding: 0 12px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; cursor: pointer;
+}
+.btn-logout {
+  background: var(--surface-2); color: var(--muted);
+  height: 28px; padding: 0 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: all .15s;
+}
+.btn-logout:hover { color: var(--danger); background: rgba(214, 69, 47, 0.12); }
+.chip-btn-sm {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px; background: var(--chip);
+  border: 1px solid var(--line); font-size: 12px; font-weight: 600; cursor: pointer;
+  color: var(--ink);
+}
+.chip-btn-sm:hover { border-color: var(--blue); }
+.dot-status { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
+.dot-status.online { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+
+/* Modal & Dialogs */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(13, 16, 23, 0.65);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: grid; place-items: center; padding: 16px;
+  opacity: 0; pointer-events: none; transition: opacity .2s ease;
+}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+.modal-card {
+  background: var(--surface); color: var(--ink);
+  border-radius: 28px; width: 100%; max-width: 480px;
+  box-shadow: 0 24px 60px -15px rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--line);
+  display: flex; flex-direction: column; max-height: 90vh;
+  transform: scale(0.95) translateY(10px);
+  transition: transform .25s cubic-bezier(.34, 1.56, .64, 1);
+  overflow: hidden;
+}
+.modal-overlay.open .modal-card {
+  transform: scale(1) translateY(0);
+}
+.modal-card--wide { max-width: 860px; }
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 16px; border-bottom: 1px solid var(--line);
+}
+.modal-title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin: 0; }
+.modal-close {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface-2); color: var(--muted); cursor: pointer; transition: all .15s;
+}
+.modal-close:hover { color: var(--ink); background: var(--line); transform: scale(1.05); }
+.modal-close svg { width: 18px; height: 18px; }
+.modal-body { padding: 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+.modal-foot {
+  padding: 16px 24px; border-top: 1px solid var(--line); background: var(--surface-2);
+  display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+}
+
+/* Auth tabs & forms */
+.auth-tabs { display: flex; gap: 6px; background: var(--surface-2); padding: 4px; border-radius: 16px; }
+.auth-tab {
+  flex: 1; height: 38px; border-radius: 12px; font-weight: 600; font-size: 13px;
+  color: var(--muted); transition: all .2s;
+}
+.auth-tab.active { background: var(--surface); color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.auth-note {
+  font-size: 12px; color: var(--muted); background: var(--surface-2);
+  padding: 10px 14px; border-radius: 14px; line-height: 1.45;
+}
+.auth-note code { font-family: monospace; font-weight: 700; color: var(--blue); }
+
+/* Admin Dashboard Table & Stats */
+.admin-stats-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+}
+@media (max-width: 680px) { .admin-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.admin-stat-card {
+  padding: 14px 16px; border-radius: 20px; background: var(--surface-2);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.admin-stat-val { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.admin-stat-lbl { font-size: 11.5px; color: var(--muted); font-weight: 500; }
+.admin-search-wrap { display: flex; gap: 8px; align-items: center; }
+.admin-search-input {
+  flex: 1; height: 42px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface-2); font-size: 13px;
+}
+.admin-table-wrap {
+  border-radius: 18px; border: 1px solid var(--line); overflow-x: auto; background: var(--surface);
+}
+.admin-table { width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left; }
+.admin-table th { background: var(--surface-2); padding: 12px 14px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.admin-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.admin-table tr:last-child td { border-bottom: 0; }
+.admin-table tr:hover td { background: var(--surface-2); }
+.btn-action-sm {
+  padding: 5px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 600; cursor: pointer; transition: transform .15s;
+}
+.btn-action-sm:hover { transform: scale(1.05); }
+.btn-inspect { background: var(--blue-tint); color: var(--blue); }
+.btn-del-user { background: rgba(214, 69, 47, 0.12); color: var(--danger); }
+.role-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.role-badge.admin { background: #fef3c7; color: #b45309; }
+.role-badge.user { background: var(--surface-2); color: var(--muted); }
+
+/* Inspect User Views */
+.inspect-info { display: flex; gap: 16px; flex-wrap: wrap; padding: 14px; border-radius: 18px; background: var(--surface-2); font-size: 13px; }
+.inspect-section-title { font-size: 13px; font-weight: 700; margin: 8px 0 2px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.inspect-tasks-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.inspect-task-card { padding: 10px 14px; border-radius: 16px; background: var(--surface-2); font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+
+/* Foot bar */
+.foot-bar { margin-top: 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.btn-sm { height: 38px; padding: 0 16px; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4.4" height="14" rx="1.4" fill="currentColor"/><rect x="13.6" y="5" width="4.4" height="14" rx="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 5.5v13l9-6.5-9-6.5z" fill="currentColor"/><rect x="16.5" y="5" width="2.6" height="14" rx="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l.8 12h8.4L17 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M3 7l6 6 4-4 8 8M15 17h6v-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-focus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></symbol>
+    <symbol id="i-cup" viewBox="0 0 24 24"><path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5V9zM16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3v2.5M12 3v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-logo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6.5V12l3.5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><svg aria-hidden="true"><use href="#i-logo"/></svg> Fokus Lime</div>
+    <div class="top-right">
+      <button type="button" class="chip-btn-sm" id="btnSupabase" title="Pengaturan Database Supabase"><span class="dot-status" id="supabaseDot"></span> <svg style="width:14px;height:14px" aria-hidden="true"><use href="#i-cloud"/></svg> Supabase</button>
+      <div id="authArea"></div>
+      <div class="chip" id="demoChip" hidden><span>Data contoh</span><button type="button" id="clearDemo">Mulai dari nol</button></div>
+      <div class="theme-switch" role="group" aria-label="Mode tampilan">
+        <button type="button" id="themeLight" aria-pressed="true"><svg aria-hidden="true"><use href="#i-sun"/></svg> Terang</button>
+        <button type="button" id="themeDark" aria-pressed="false"><svg aria-hidden="true"><use href="#i-moon"/></svg> Gelap</button>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <h1>Atur waktu tiap tugas, <span class="soft">pantau progresmu.</span></h1>
+    <p class="sub">Setiap tugas punya durasi fokus dan istirahat sendiri. Selesaikan sesi, lalu lihat totalnya per hari, minggu, bulan, dan tahun.</p>
+  </section>
+
+  <div class="cols">
+    <div class="col">
+      <div class="deck">
+      <section class="card card--blue" aria-label="Timer">
+        <div class="timer-top">
+          <div class="now-task">Sedang dikerjakan<b id="nowTask">-</b></div>
+          <div class="pills" role="group" aria-label="Mode timer">
+            <button type="button" class="pill" id="modeFocus" aria-pressed="true">Fokus</button>
+            <button type="button" class="pill" id="modeBreak" aria-pressed="false">Istirahat</button>
+          </div>
+        </div>
+        <div class="ring">
+          <svg viewBox="0 0 240 240" aria-hidden="true">
+            <circle class="track" cx="120" cy="120" r="108" fill="none" stroke-width="12"/>
+            <circle class="bar" id="ringBar" cx="120" cy="120" r="108" fill="none" stroke-width="12" stroke-linecap="round" stroke-dasharray="678.58" stroke-dashoffset="0"/>
+          </svg>
+          <div class="ring-center">
+            <div class="clock" id="clock" role="timer" aria-live="off">25:00</div>
+            <div class="ring-label" id="ringLabel">Fokus</div>
+          </div>
+        </div>
+        <div class="controls">
+          <button type="button" class="round" id="resetBtn" aria-label="Ulangi sesi"><svg aria-hidden="true"><use href="#i-reset"/></svg></button>
+          <button type="button" class="play" id="playBtn" aria-label="Mulai"><svg aria-hidden="true"><use href="#i-play"/></svg></button>
+          <button type="button" class="round" id="skipBtn" aria-label="Lewati sesi"><svg aria-hidden="true"><use href="#i-skip"/></svg></button>
+        </div>
+        <div class="cycle" id="cycle" aria-hidden="true"></div>
+        <div class="cycle-note muted" id="cycleNote"></div>
+      </section>
+      </div>
+
+      <section class="card" aria-labelledby="taskTitle">
+        <div class="card-head">
+          <h2 class="card-title" id="taskTitle">Tugas</h2>
+          <span class="muted" id="taskCount"></span>
+        </div>
+        <ul class="task-list" id="taskList"></ul>
+        <form class="task-form" id="taskForm" autocomplete="off">
+          <div class="field wide">
+            <label for="fName" id="formLabel">Tugas baru</label>
+            <input id="fName" type="text" maxlength="60" placeholder="Contoh: Revisi desain halaman beranda" required>
+          </div>
+          <div class="field"><label for="fFocus">Fokus (menit)</label><input id="fFocus" type="number" min="1" max="180" value="25" inputmode="numeric" required></div>
+          <div class="field"><label for="fBreak">Istirahat (menit)</label><input id="fBreak" type="number" min="1" max="60" value="5" inputmode="numeric" required></div>
+          <div class="field"><label for="fTarget">Target sesi</label><input id="fTarget" type="number" min="1" max="20" value="4" inputmode="numeric" required></div>
+          <div class="form-actions">
+            <button type="submit" class="btn blue" id="formSubmit">Tambah tugas</button>
+            <button type="button" class="btn ghost" id="formCancel" hidden>Batal</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="col">
+      <div class="periods" role="group" aria-label="Periode analisis" id="periods">
+        <button type="button" class="pill" data-p="day" aria-pressed="false">Hari ini</button>
+        <button type="button" class="pill" data-p="week" aria-pressed="false">Minggu</button>
+        <button type="button" class="pill" data-p="month" aria-pressed="true">Bulan</button>
+        <button type="button" class="pill" data-p="year" aria-pressed="false">Tahun</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat card--blue">
+          <div class="stat-label"><svg id="deltaIcon" aria-hidden="true"><use href="#i-up"/></svg> Waktu fokus</div>
+          <div class="stat-big" id="sFocus">0<small>mnt</small></div>
+          <div class="stat-note muted" id="sDelta"></div>
+          <div class="goal">
+            <div class="goal-row"><span>Target <input id="goalIn" type="number" min="10" max="1000" step="10" value="120" aria-label="Target fokus per hari dalam menit"> mnt/hari</span><span id="goalPct">0%</span></div>
+            <div class="goal-dots" id="goalDots" role="img" aria-label="Progres target"></div>
+          </div>
+        </div>
+        <div class="stat stat--plain">
+          <div class="stat-label"><svg aria-hidden="true"><use href="#i-focus"/></svg> Sesi selesai</div>
+          <div class="stat-big" id="sCount">0</div>
+          <div class="stat-note muted" id="sCountNote"></div>
+          <div class="share" id="share"></div>
+        </div>
+      </div>
+
+      <section class="card" aria-labelledby="ovTitle">
+        <div class="card-head"><h2 class="card-title" id="ovTitle">Ringkasan</h2><span class="muted" id="ovRange"></span></div>
+        <div class="chart-head">
+          <div><div class="muted" style="font-size:12px">Total fokus</div><div class="total" id="oTotal">0 jam</div></div>
+          <div class="legend"><span><i></i> Sesi fokus</span><span><i class="dk"></i> Sesi istirahat</span></div>
+        </div>
+        <div class="chart" id="chart"><div class="yaxis" id="yaxis"></div><div class="plot" id="plot"></div></div>
+        <p class="muted" id="bestNote" style="margin:12px 0 0;font-size:12px"></p>
+      </section>
+
+      <section class="card" aria-labelledby="actTitle">
+        <div class="card-head"><h2 class="card-title" id="actTitle">Aktivitas terbaru</h2></div>
+        <ul class="acts" id="acts"></ul>
+      </section>
+    </div>
+  <footer class="foot-bar">
+    <div class="foot-actions">
+      <button type="button" class="btn ghost btn-sm" id="exportBtn">Ekspor data</button>
+      <button type="button" class="btn ghost btn-sm" id="importBtn">Impor data</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <button type="button" class="btn blue btn-sm" id="installBtn" hidden>Pasang aplikasi</button>
+    </div>
+    <p class="foot" id="saveNote"></p>
+  </footer>
+</div>
+
+<!-- Modal Auth (Masuk / Daftar) -->
+<div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 class="modal-title" id="authTitle"><svg style="width:20px;height:20px;color:var(--blue)" aria-hidden="true"><use href="#i-user"/></svg> Masuk / Daftar</h3>
+      <button type="button" class="modal-close" id="closeAuthModal" aria-label="Tutup"><svg aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab active" id="tabLogin" role="tab" aria-selected="true">Masuk</button>
+        <button type="button" class="auth-tab" id="tabRegister" role="tab" aria-selected="false">Daftar Akun</button>
+      </div>
+      <form id="authForm" autocomplete="off">
+        <div class="field wide" style="margin-bottom:12px">
+          <label for="authUsername">Username</label>
+          <input type="text" id="authUsername" placeholder="Contoh: azzam atau admin" required minlength="3" maxlength="30" autocomplete="username">
+        </div>
+        <div class="field wide" style="margin-bottom:16px">
+          <label for="authPassword">Password</label>
+          <input type="password" id="authPassword" placeholder="Masukkan password" required minlength="4" maxlength="50" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn blue" id="authSubmit" style="width:100%;height:46px">Masuk ke Akun</button>
+      </form>
+      <div class="auth-note">
+        🔒 <b>Keamanan Terjamin</b>: Password di-hash dengan enkripsi <b>SHA-256</b> sebelum disimpan, sehingga aman dan terlindungi.<br>
+        🛡️ <b>Akun Admin Default</b>: <code>admin</code> / password: <code>admin123</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Dashboard Admin -->
+<div class="modal-overlay" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+  <div class="modal-card modal-card--wide">
+    <div class="modal-head">
+      <div>
+        <h3 class="modal-title" id="adminTitle"><svg style="width:22px;height:22px;color:#f59e0b" aria-hidden="true"><use href="#i-shield"/></svg> Dashboard Admin</h3>
+        <span style="font-size:12px;color:var(--muted)">Kelola dan cek aktivitas semua pengguna terdaftar</span>
+      </div>
+      <button type="button" class="modal-close" id="closeAdminModal" aria-label="Tutup"><svg aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+          <span class="admin-stat-lbl">Total Pengguna</span>
+          <span class="admin-stat-val" id="adminTotalUsers">0</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="admin-stat-lbl">Total Waktu Fokus</span>
+          <span class="admin-stat-val" id="adminTotalFocus">0 j</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="admin-stat-lbl">Total Sesi Pomodoro</span>
+          <span class="admin-stat-val" id="adminTotalSessions">0</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="admin-stat-lbl">Database</span>
+          <span class="admin-stat-val" id="adminDbStatus" style="font-size:15px;margin-top:4px">Local</span>
+        </div>
+      </div>
+      <div class="admin-search-wrap">
+        <input type="text" class="admin-search-input" id="adminSearchInput" placeholder="Cari berdasarkan username pengguna...">
+        <button type="button" class="chip-btn-sm" id="adminRefreshBtn">Segarkan</button>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Terdaftar</th>
+              <th>Sesi Selesai</th>
+              <th>Total Fokus</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="adminUserTableBody">
+            <!-- populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detail User (Inspect User) -->
+<div class="modal-overlay" id="inspectUserModal" role="dialog" aria-modal="true" aria-labelledby="inspectTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 class="modal-title" id="inspectTitle"><svg style="width:20px;height:20px;color:var(--blue)" aria-hidden="true"><use href="#i-user"/></svg> Detail Pengguna</h3>
+      <button type="button" class="modal-close" id="closeInspectModal" aria-label="Tutup"><svg aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="inspect-info">
+        <div><b>Username:</b> <span id="inspectUsername">-</span></div>
+        <div><b>Role:</b> <span id="inspectRole">-</span></div>
+        <div><b>Terdaftar:</b> <span id="inspectCreated">-</span></div>
+        <div><b>Total Fokus:</b> <span id="inspectTotalFocus">-</span></div>
+        <div><b>Target Harian:</b> <span id="inspectGoal">-</span> mnt/hari</div>
+      </div>
+      <div>
+        <div class="inspect-section-title">Daftar Tugas Pengguna</div>
+        <ul class="inspect-tasks-list" id="inspectTasksList"></ul>
+      </div>
+      <div>
+        <div class="inspect-section-title">Riwayat Sesi Terakhir</div>
+        <ul class="inspect-tasks-list" id="inspectSessionsList"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Konfigurasi Supabase -->
+<div class="modal-overlay" id="supabaseModal" role="dialog" aria-modal="true" aria-labelledby="sbTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 class="modal-title" id="sbTitle"><svg style="width:20px;height:20px;color:#10b981" aria-hidden="true"><use href="#i-cloud"/></svg> Konfigurasi Supabase</h3>
+      <button type="button" class="modal-close" id="closeSupabaseModal" aria-label="Tutup"><svg aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface-2);border-radius:18px">
+        <span style="font-weight:600">Status Koneksi:</span>
+        <span class="role-badge" id="sbConnectionBadge" style="background:#e2e8f0;color:#475569">Local Storage (Offline)</span>
+      </div>
+      <form id="supabaseForm" autocomplete="off">
+        <div class="field wide" style="margin-bottom:12px">
+          <label for="sbUrl">Supabase Project URL</label>
+          <input type="url" id="sbUrl" placeholder="https://xxxxxxxx.supabase.co" required>
+        </div>
+        <div class="field wide" style="margin-bottom:16px">
+          <label for="sbKey">Supabase Anon / Public Key</label>
+          <input type="password" id="sbKey" placeholder="eyJhbGciOi..." required>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="submit" class="btn blue" style="flex:1;height:44px" id="btnSaveSupabase">Simpan & Hubungkan</button>
+          <button type="button" class="btn ghost" style="height:44px" id="btnDisconnectSupabase">Putuskan (Mode Lokal)</button>
+        </div>
+      </form>
+      <div class="auth-note">
+        💡 <b>Panduan Setup Database Supabase</b>:
+        <ol style="margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+          <li>Buka project di <a href="https://supabase.com" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">supabase.com</a>.</li>
+          <li>Masuk ke menu <b>SQL Editor</b>.</li>
+          <li>Jalankan skrip yang ada di berkas <code>supabase-schema.sql</code> di proyek ini.</li>
+          <li>Salin <b>Project URL</b> dan <b>Anon Key</b> dari <i>Project Settings &gt; API</i> ke kolom di atas.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const DAY = 86400000, LONG_EVERY = 4, LONG_MIN = 15, MAX_SESSIONS = 4000;
+const LS_KEY = 'fokus-lime-v1', LS_THEME = 'fokus-lime-theme';
+const DAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const pad = (n) => String(n).padStart(2, '0');
+const uid = () => Math.random().toString(36).slice(2, 9);
+const SVGNS = 'http://www.w3.org/2000/svg';
+function h(tag, cls, kids) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  (kids || []).forEach((k) => e.append(k));
+  return e;
+}
+function ico(id) {
+  const s = document.createElementNS(SVGNS, 'svg');
+  s.setAttribute('aria-hidden', 'true');
+  const u = document.createElementNS(SVGNS, 'use');
+  u.setAttribute('href', '#' + id);
+  s.append(u);
+  return s;
+}
+
+/* ---------- data ---------- */
+// Sesi disimpan ringkas: [waktuSelesai, idTugas, 'f' (fokus) | 'b' (istirahat), menit]
+function demoState() {
+  const tasks = [
+    { id: 't1', name: 'Revisi desain beranda', focus: 25, brk: 5, target: 4 },
+    { id: 't2', name: 'Tulis dokumentasi API', focus: 50, brk: 10, target: 2 },
+    { id: 't3', name: 'Belajar TypeScript', focus: 30, brk: 5, target: 3 }
+  ];
+  const now = Date.now();
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+  let seed = 7;
+  const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  const sessions = [];
+  for (let i = 200; i >= 0; i--) {
+    const day = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() - i);
+    const dow = day.getDay();
+    let n = dow === 0 ? 0 : Math.floor(rnd() * 4) + (dow === 6 ? 1 : 2);
+    if (i === 0) n = 2;
+    let t = day.getTime() + 8 * 3600000 + Math.floor(rnd() * 3600000);
+    for (let k = 0; k < n; k++) {
+      const task = tasks[Math.floor(rnd() * 3)];
+      const end = t + task.focus * 60000;
+      if (end > now) break;
+      sessions.push([end, task.id, 'f', task.focus]);
+      const bend = end + task.brk * 60000;
+      if (bend <= now) sessions.push([bend, task.id, 'b', task.brk]);
+      t = bend + Math.floor(rnd() * 1200000);
+    }
+  }
+  const names = {};
+  tasks.forEach((t) => { names[t.id] = t.name; });
+  return { v: 1, tasks, sessions, goal: 120, activeId: 't1', demo: true, period: 'month', names };
+}
+function normalize(s) {
+  const o = Object.assign({ tasks: [], sessions: [], goal: 120, activeId: null, demo: false, period: 'month', names: {} }, s || {});
+  if (!Array.isArray(o.tasks)) o.tasks = [];
+  if (!Array.isArray(o.sessions)) o.sessions = [];
+  if (!o.names || typeof o.names !== 'object') o.names = {};
+  o.tasks.forEach((t) => {
+    o.names[t.id] = t.name;
+    t.completed = Boolean(t.completed);
+  });
+  if (!o.tasks.some((t) => t.id === o.activeId)) o.activeId = o.tasks[0] ? o.tasks[0].id : null;
+  if (!['day', 'week', 'month', 'year'].includes(o.period)) o.period = 'month';
+  o.goal = Math.max(10, Math.min(1000, Number(o.goal) || 120));
+  return o;
+}
+/* ---------- Otentikasi, Admin, & Supabase Database ---------- */
+const USERS_KEY = 'fokus_users_v2';
+const CURRENT_USER_KEY = 'fokus_current_user_v2';
+const SB_CONFIG_KEY = 'fokus_supabase_config_v2';
+const ADMIN_HASH = '252520c9eedc60aaa109031d54893a70a095fdd8e117ea8d89895727363b4c5e'; // admin123:fokus_salt_2026
+
+async function hashPassword(str) {
+  const salted = str + ':fokus_salt_2026';
+  if (window.crypto && crypto.subtle) {
+    try {
+      const buf = new TextEncoder().encode(salted);
+      const digest = await crypto.subtle.digest('SHA-256', buf);
+      return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {}
+  }
+  let hash = 0;
+  for (let i = 0; i < salted.length; i++) {
+    hash = ((hash << 5) - hash) + salted.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(16).padStart(64, '0');
+}
+
+const sb = { client: null, url: '', key: '', connected: false };
+
+function updateSupabaseStatusUI() {
+  const dot = $('supabaseDot');
+  const badge = $('sbConnectionBadge');
+  const adminDb = $('adminDbStatus');
+  if (sb.connected) {
+    if (dot) dot.className = 'dot-status online';
+    if (badge) { badge.textContent = 'Terhubung ke Supabase Cloud'; badge.style.background = '#dcfce7'; badge.style.color = '#15803d'; }
+    if (adminDb) adminDb.textContent = 'Supabase Cloud';
+  } else {
+    if (dot) dot.className = 'dot-status';
+    if (badge) { badge.textContent = 'Local Database (Offline)'; badge.style.background = '#e2e8f0'; badge.style.color = '#475569'; }
+    if (adminDb) adminDb.textContent = 'Local Storage';
+  }
+}
+
+function initSupabase() {
+  try {
+    const raw = localStorage.getItem(SB_CONFIG_KEY);
+    if (raw) {
+      const cfg = JSON.parse(raw);
+      if (cfg && cfg.url && cfg.key && window.supabase && window.supabase.createClient) {
+        sb.url = cfg.url;
+        sb.key = cfg.key;
+        sb.client = window.supabase.createClient(cfg.url, cfg.key);
+        sb.connected = true;
+      }
+    }
+  } catch (e) {
+    sb.connected = false;
+  }
+  updateSupabaseStatusUI();
+}
+
+function getLocalUsers() {
+  try {
+    const r = localStorage.getItem(USERS_KEY);
+    let list = r ? JSON.parse(r) : null;
+    if (!Array.isArray(list) || !list.length) {
+      list = [{ username: 'admin', role: 'admin', passwordHash: ADMIN_HASH, createdAt: Date.now() - 86400000 * 30 }];
+      localStorage.setItem(USERS_KEY, JSON.stringify(list));
+    }
+    if (!list.some(u => u.username === 'admin')) {
+      list.unshift({ username: 'admin', role: 'admin', passwordHash: ADMIN_HASH, createdAt: Date.now() - 86400000 * 30 });
+      localStorage.setItem(USERS_KEY, JSON.stringify(list));
+    }
+    return list;
+  } catch (e) {
+    return [{ username: 'admin', role: 'admin', passwordHash: ADMIN_HASH, createdAt: Date.now() }];
+  }
+}
+
+function saveLocalUsers(list) {
+  try { localStorage.setItem(USERS_KEY, JSON.stringify(list)); } catch (e) {}
+}
+
+let currentUser = null;
+
+function getCurrentUser() {
+  if (currentUser) return currentUser;
+  try {
+    const raw = localStorage.getItem(CURRENT_USER_KEY);
+    if (raw) currentUser = JSON.parse(raw);
+  } catch (e) {}
+  return currentUser;
+}
+
+function setCurrentUser(u) {
+  currentUser = u;
+  try {
+    if (u) localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u));
+    else localStorage.removeItem(CURRENT_USER_KEY);
+  } catch (e) {}
+  renderAuthUI();
+}
+
+function userStorageKey(username) {
+  return username ? LS_KEY + '_u_' + username.toLowerCase() : LS_KEY;
+}
+
+function loadUserDataFor(username) {
+  try {
+    const r = localStorage.getItem(userStorageKey(username));
+    if (r) return JSON.parse(r);
+  } catch (e) {}
+  return null;
+}
+
+function saveUserDataFor(username, data) {
+  try {
+    localStorage.setItem(userStorageKey(username), JSON.stringify(data));
+  } catch (e) {}
+}
+
+function renderAuthUI() {
+  const area = $('authArea');
+  if (!area) return;
+  area.replaceChildren();
+  const u = getCurrentUser();
+  if (!u) {
+    const btn = h('button', 'btn-auth');
+    btn.type = 'button';
+    btn.append(ico('i-user'), ' Masuk / Daftar');
+    btn.addEventListener('click', () => openAuthModal('login'));
+    area.append(btn);
+  } else if (u.role === 'admin') {
+    const chip = h('div', 'user-chip admin');
+    const badge = h('span', 'badge-admin', ['Admin']);
+    const name = h('span', '', [u.username]);
+    const btnDash = h('button', 'btn-admin-dash', ['Dashboard']);
+    btnDash.type = 'button';
+    btnDash.addEventListener('click', openAdminDashboard);
+    const btnOut = h('button', 'btn-logout', ['Keluar']);
+    btnOut.type = 'button';
+    btnOut.addEventListener('click', logout);
+    chip.append(badge, name, btnDash, btnOut);
+    area.append(chip);
+  } else {
+    const chip = h('div', 'user-chip');
+    const icon = h('span', '', [ico('i-user')]);
+    icon.style.display = 'grid'; icon.style.placeItems = 'center';
+    const svgEl = icon.querySelector('svg');
+    if (svgEl) { svgEl.style.width = '15px'; svgEl.style.height = '15px'; }
+    const name = h('span', '', [u.username]);
+    const btnOut = h('button', 'btn-logout', ['Keluar']);
+    btnOut.type = 'button';
+    btnOut.addEventListener('click', logout);
+    chip.append(icon, name, btnOut);
+    area.append(chip);
+  }
+}
+
+function lsLoad() {
+  const u = getCurrentUser();
+  const raw = u ? loadUserDataFor(u.username) : null;
+  if (raw) return raw;
+  try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null; } catch (e) { return null; }
+}
+
+function lsSave() {
+  const u = getCurrentUser();
+  if (u) saveUserDataFor(u.username, state);
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+let state = normalize(lsLoad() || demoState());
+
+function setNote(mode) {
+  $('saveNote').textContent = sb.connected
+    ? 'Tersinkronisasi dengan Database Supabase Cloud.'
+    : 'Tersimpan di perangkat lokal ini dengan aman.';
+}
+function snapshot() {
+  return { v: 1, tasks: state.tasks, sessions: state.sessions, goal: state.goal, activeId: state.activeId, demo: !!state.demo, period: state.period, names: state.names };
+}
+function persist() {
+  if (state.sessions.length > MAX_SESSIONS) state.sessions = state.sessions.slice(-MAX_SESSIONS);
+  lsSave();
+  const u = getCurrentUser();
+  if (u && sb.connected && sb.client) {
+    sb.client.from('fokus_user_data').upsert({
+      username: u.username,
+      tasks: state.tasks,
+      sessions: state.sessions,
+      goal: state.goal,
+      updated_at: new Date().toISOString()
+    }).then(() => {}).catch(() => {});
+  }
+}
+function initStore() {
+  setNote(sb.connected ? 'db' : 'local');
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* abaikan */ }
+}
+
+async function login(username, password) {
+  username = username.trim().toLowerCase();
+  if (!username || !password) {
+    flash('Masukkan username dan password.');
+    return;
+  }
+  const hashed = await hashPassword(password);
+
+  // 1. Cek Supabase jika terhubung
+  if (sb.connected && sb.client) {
+    try {
+      const { data, error } = await sb.client
+        .from('fokus_users')
+        .select('*')
+        .eq('username', username)
+        .eq('password_hash', hashed)
+        .single();
+      if (data) {
+        const u = { username: data.username, role: data.role || 'user' };
+        setCurrentUser(u);
+        const { data: uData } = await sb.client
+          .from('fokus_user_data')
+          .select('*')
+          .eq('username', username)
+          .single();
+        if (uData && Array.isArray(uData.tasks)) {
+          state = normalize({ tasks: uData.tasks, sessions: uData.sessions || [], goal: uData.goal || 120, names: {} });
+        } else {
+          state = normalize(loadUserDataFor(username) || (username === 'admin' ? { tasks: [], sessions: [], goal: 120 } : demoState()));
+        }
+        applyState();
+        closeAuthModal();
+        flash('Berhasil masuk sebagai ' + u.username + '!');
+        return;
+      }
+    } catch (e) {}
+  }
+
+  // 2. Cek database lokal
+  const users = getLocalUsers();
+  const found = users.find(x => x.username.toLowerCase() === username && x.passwordHash === hashed);
+  if (!found) {
+    flash('Username atau password salah.');
+    return;
+  }
+  const u = { username: found.username, role: found.role || 'user' };
+  setCurrentUser(u);
+  const uData = loadUserDataFor(found.username);
+  state = normalize(uData || (found.username === 'admin' ? { tasks: [], sessions: [], goal: 120 } : demoState()));
+  applyState();
+  closeAuthModal();
+  flash('Selamat datang kembali, ' + found.username + '!');
+}
+
+async function register(username, password) {
+  username = username.trim().toLowerCase();
+  if (!username || username.length < 3) {
+    flash('Username minimal 3 karakter.');
+    return;
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    flash('Username hanya boleh berisi huruf, angka, dan underscore.');
+    return;
+  }
+  if (!password || password.length < 4) {
+    flash('Password minimal 4 karakter.');
+    return;
+  }
+  const hashed = await hashPassword(password);
+  const users = getLocalUsers();
+  if (users.some(x => x.username.toLowerCase() === username)) {
+    flash('Username sudah digunakan. Silakan pilih username lain.');
+    return;
+  }
+
+  const newUser = {
+    username,
+    role: 'user',
+    passwordHash: hashed,
+    createdAt: Date.now()
+  };
+  users.push(newUser);
+  saveLocalUsers(users);
+
+  // Sync ke Supabase jika terhubung
+  if (sb.connected && sb.client) {
+    try {
+      await sb.client.from('fokus_users').insert({
+        username: newUser.username,
+        password_hash: newUser.passwordHash,
+        role: newUser.role
+      });
+      await sb.client.from('fokus_user_data').insert({
+        username: newUser.username,
+        tasks: [],
+        sessions: [],
+        goal: 120
+      });
+    } catch (e) {}
+  }
+
+  const u = { username: newUser.username, role: 'user' };
+  setCurrentUser(u);
+  state = normalize({ tasks: [], sessions: [], goal: 120, names: {} });
+  saveUserDataFor(username, snapshot());
+  applyState();
+  closeAuthModal();
+  flash('Akun ' + username + ' berhasil dibuat dan otomatis masuk!');
+}
+
+function logout() {
+  const prev = getCurrentUser();
+  setCurrentUser(null);
+  state = normalize(lsLoad() || demoState());
+  applyState();
+  flash(prev ? 'Sampai jumpa, ' + prev.username + '!' : 'Berhasil keluar.');
+}
+
+async function openAdminDashboard() {
+  const u = getCurrentUser();
+  if (!u || u.role !== 'admin') {
+    flash('Akses ditolak: Hanya admin yang dapat membuka dashboard ini.');
+    return;
+  }
+  $('adminModal').classList.add('open');
+  await renderAdminDashboard('');
+}
+
+async function renderAdminDashboard(filter) {
+  let users = getLocalUsers();
+  if (sb.connected && sb.client) {
+    try {
+      const { data } = await sb.client.from('fokus_users').select('*');
+      if (Array.isArray(data) && data.length) {
+        data.forEach(dbUser => {
+          if (!users.some(x => x.username === dbUser.username)) {
+            users.push({
+              username: dbUser.username,
+              role: dbUser.role,
+              createdAt: dbUser.created_at ? new Date(dbUser.created_at).getTime() : Date.now()
+            });
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  let totalMinutes = 0;
+  let totalSessions = 0;
+  const userStats = users.map(user => {
+    const uData = loadUserDataFor(user.username);
+    const sessions = (uData && Array.isArray(uData.sessions)) ? uData.sessions : (user.username === state.activeId ? state.sessions : []);
+    const focusSessions = sessions.filter(s => s[2] === 'f');
+    const userMinutes = focusSessions.reduce((acc, cur) => acc + (cur[3] || 0), 0);
+    totalMinutes += userMinutes;
+    totalSessions += focusSessions.length;
+    return {
+      ...user,
+      sessionsCount: focusSessions.length,
+      focusMinutes: userMinutes,
+      tasksCount: (uData && uData.tasks) ? uData.tasks.length : 0
+    };
+  });
+
+  $('adminTotalUsers').textContent = users.length;
+  $('adminTotalFocus').textContent = fmtDur(totalMinutes);
+  $('adminTotalSessions').textContent = totalSessions;
+  updateSupabaseStatusUI();
+
+  const tbody = $('adminUserTableBody');
+  tbody.replaceChildren();
+
+  const q = (filter || '').toLowerCase().trim();
+  const filtered = userStats.filter(x => !q || x.username.toLowerCase().includes(q));
+
+  if (!filtered.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 7;
+    td.style.textAlign = 'center';
+    td.style.padding = '24px';
+    td.style.color = 'var(--muted)';
+    td.textContent = 'Tidak ada pengguna yang cocok.';
+    tr.append(td);
+    tbody.append(tr);
+    return;
+  }
+
+  filtered.forEach((usr, idx) => {
+    const tr = document.createElement('tr');
+    const dateStr = usr.createdAt ? new Date(usr.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+
+    const tdNo = document.createElement('td'); tdNo.textContent = String(idx + 1);
+    const tdUser = document.createElement('td');
+    tdUser.innerHTML = '<b>' + usr.username + '</b>';
+
+    const tdRole = document.createElement('td');
+    const roleSpan = h('span', 'role-badge ' + (usr.role === 'admin' ? 'admin' : 'user'), [usr.role === 'admin' ? 'Admin' : 'User']);
+    tdRole.append(roleSpan);
+
+    const tdDate = document.createElement('td'); tdDate.textContent = dateStr;
+    const tdSess = document.createElement('td'); tdSess.textContent = usr.sessionsCount + ' sesi';
+    const tdDur = document.createElement('td'); tdDur.textContent = fmtDur(usr.focusMinutes);
+
+    const tdAct = document.createElement('td');
+    const btnInspect = h('button', 'btn-action-sm btn-inspect', ['Cek User']);
+    btnInspect.type = 'button';
+    btnInspect.addEventListener('click', () => inspectUser(usr.username));
+    tdAct.append(btnInspect);
+
+    if (usr.username !== 'admin') {
+      const btnDel = h('button', 'btn-action-sm btn-del-user', ['Hapus']);
+      btnDel.type = 'button';
+      btnDel.style.marginLeft = '6px';
+      btnDel.addEventListener('click', () => deleteUser(usr.username));
+      tdAct.append(btnDel);
+    }
+
+    tr.append(tdNo, tdUser, tdRole, tdDate, tdSess, tdDur, tdAct);
+    tbody.append(tr);
+  });
+}
+
+function inspectUser(username) {
+  const users = getLocalUsers();
+  const user = users.find(u => u.username === username);
+  if (!user) return;
+  const uData = loadUserDataFor(username) || { tasks: [], sessions: [], goal: 120 };
+
+  $('inspectUsername').textContent = user.username;
+  $('inspectRole').textContent = user.role === 'admin' ? 'Administrator' : 'Pengguna Biasa';
+  $('inspectCreated').textContent = user.createdAt ? new Date(user.createdAt).toLocaleString('id-ID') : '-';
+  const focusSessions = (uData.sessions || []).filter(s => s[2] === 'f');
+  const totalMin = focusSessions.reduce((acc, cur) => acc + (cur[3] || 0), 0);
+  $('inspectTotalFocus').textContent = fmtDur(totalMin) + ' (' + focusSessions.length + ' sesi)';
+  $('inspectGoal').textContent = uData.goal || 120;
+
+  const tList = $('inspectTasksList');
+  tList.replaceChildren();
+  if (!uData.tasks || !uData.tasks.length) {
+    tList.append(h('li', 'inspect-task-card', ['Belum ada tugas dibuat']));
+  } else {
+    uData.tasks.forEach(t => {
+      const li = h('li', 'inspect-task-card');
+      const left = h('div', '', [h('b', '', [t.name]), document.createElement('br'), h('span', 'muted', [t.focus + ' mnt fokus, ' + t.brk + ' mnt istirahat'])]);
+      const right = h('span', 'role-badge user', [t.completed ? 'Selesai' : 'Target ' + t.target + ' sesi']);
+      li.append(left, right);
+      tList.append(li);
+    });
+  }
+
+  const sList = $('inspectSessionsList');
+  sList.replaceChildren();
+  if (!uData.sessions || !uData.sessions.length) {
+    sList.append(h('li', 'inspect-task-card', ['Belum ada riwayat sesi tercatat']));
+  } else {
+    const recent = uData.sessions.slice(-8).reverse();
+    recent.forEach(s => {
+      const li = h('li', 'inspect-task-card');
+      const timeStr = new Date(s[0]).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+      const left = h('div', '', [h('b', '', [s[2] === 'f' ? 'Fokus' : 'Istirahat']), ' (' + s[3] + ' mnt)']);
+      const right = h('span', 'muted', [timeStr]);
+      li.append(left, right);
+      sList.append(li);
+    });
+  }
+
+  $('inspectUserModal').classList.add('open');
+}
+
+function deleteUser(username) {
+  if (username === 'admin') return;
+  if (!confirm('Yakin ingin menghapus pengguna "' + username + '"? Data tugas dan sesinya akan dihapus permanen.')) return;
+  let users = getLocalUsers().filter(u => u.username !== username);
+  saveLocalUsers(users);
+  try { localStorage.removeItem(userStorageKey(username)); } catch (e) {}
+  if (sb.connected && sb.client) {
+    sb.client.from('fokus_users').delete().eq('username', username).then(() => {}).catch(() => {});
+    sb.client.from('fokus_user_data').delete().eq('username', username).then(() => {}).catch(() => {});
+  }
+  flash('Pengguna "' + username + '" telah dihapus.');
+  renderAdminDashboard($('adminSearchInput').value);
+}
+
+function openSupabaseModal() {
+  const raw = localStorage.getItem(SB_CONFIG_KEY);
+  if (raw) {
+    try {
+      const cfg = JSON.parse(raw);
+      if (cfg.url) $('sbUrl').value = cfg.url;
+      if (cfg.key) $('sbKey').value = cfg.key;
+    } catch (e) {}
+  }
+  updateSupabaseStatusUI();
+  $('supabaseModal').classList.add('open');
+}
+
+async function saveSupabaseConfig(url, key) {
+  url = url.trim();
+  key = key.trim();
+  if (!url || !key) {
+    flash('Mohon masukkan URL dan Anon Key Supabase.');
+    return;
+  }
+  if (!window.supabase || !window.supabase.createClient) {
+    flash('Supabase library belum siap. Periksa koneksi internet.');
+    return;
+  }
+  try {
+    const client = window.supabase.createClient(url, key);
+    const { data, error } = await client.from('fokus_users').select('username').limit(1);
+    sb.url = url;
+    sb.key = key;
+    sb.client = client;
+    sb.connected = true;
+    localStorage.setItem(SB_CONFIG_KEY, JSON.stringify({ url, key }));
+    updateSupabaseStatusUI();
+    $('supabaseModal').classList.remove('open');
+    flash('Berhasil terhubung ke Supabase Cloud!');
+    persist();
+  } catch (err) {
+    flash('Gagal terhubung ke Supabase: ' + (err.message || 'Periksa URL dan Key'));
+  }
+}
+
+function disconnectSupabase() {
+  localStorage.removeItem(SB_CONFIG_KEY);
+  sb.client = null;
+  sb.url = '';
+  sb.key = '';
+  sb.connected = false;
+  $('sbUrl').value = '';
+  $('sbKey').value = '';
+  updateSupabaseStatusUI();
+  $('supabaseModal').classList.remove('open');
+  flash('Supabase diputuskan. Menggunakan Local Database.');
+}
+
+/* ---------- periode dan statistik ---------- */
+function range(p, off) {
+  const n = new Date(), y = n.getFullYear(), m = n.getMonth(), d = n.getDate();
+  if (p === 'day') return [new Date(y, m, d + off), new Date(y, m, d + off + 1)];
+  if (p === 'week') { const dow = (n.getDay() + 6) % 7; return [new Date(y, m, d - dow + off * 7), new Date(y, m, d - dow + off * 7 + 7)]; }
+  if (p === 'month') return [new Date(y, m + off, 1), new Date(y, m + off + 1, 1)];
+  return [new Date(y + off, 0, 1), new Date(y + off + 1, 0, 1)];
+}
+function inRange(r) {
+  const a = r[0].getTime(), b = r[1].getTime();
+  return state.sessions.filter((s) => s[0] >= a && s[0] < b);
+}
+const focusMin = (list) => list.reduce((a, s) => a + (s[2] === 'f' ? s[3] : 0), 0);
+function bucketSpec(p, r) {
+  if (p === 'day') return { n: 12, idx: (t) => Math.floor((t - r[0].getTime()) / 7200000), label: (i) => pad(i * 2), full: (i) => pad(i * 2) + '.00-' + pad(i * 2 + 2) + '.00' };
+  if (p === 'week') return { n: 7, idx: (t) => (new Date(t).getDay() + 6) % 7, label: (i) => DAYS[i], full: (i) => DAYS[i] };
+  if (p === 'month') return { n: Math.round((r[1] - r[0]) / DAY), idx: (t) => new Date(t).getDate() - 1, label: (i) => ((i + 1) % 5 === 0 || i === 0 ? String(i + 1) : ''), full: (i) => 'Tanggal ' + (i + 1) };
+  return { n: 12, idx: (t) => new Date(t).getMonth(), label: (i) => MONTHS[i], full: (i) => MONTHS[i] };
+}
+function buckets(p) {
+  const r = range(p, 0), spec = bucketSpec(p, r);
+  const bk = Array.from({ length: spec.n }, () => ({ f: 0, b: 0, m: 0 }));
+  inRange(r).forEach((s) => {
+    const i = Math.max(0, Math.min(spec.n - 1, spec.idx(s[0])));
+    if (s[2] === 'f') { bk[i].f++; bk[i].m += s[3]; } else bk[i].b++;
+  });
+  let unit = 1;
+  for (const u of [1, 2, 5, 10, 20, 50, 100, 200]) {
+    unit = u;
+    if (Math.max(...bk.map((x) => Math.ceil(x.f / u) + Math.ceil(x.b / u))) <= 10) break;
+  }
+  const most = Math.max(...bk.map((x) => Math.ceil(x.f / unit) + Math.ceil(x.b / unit)));
+  const n = Math.max(6, most + (most % 2));
+  return { r, spec, bk, unit, n };
+}
+function fmtDur(m) {
+  m = Math.round(m);
+  if (m >= 60) { const hh = Math.floor(m / 60), mm = m % 60; return mm ? hh + ' j ' + mm + ' mnt' : hh + ' jam'; }
+  return m + ' mnt';
+}
+function taskName(id) { return state.names[id] || 'Tugas dihapus'; }
+const taskById = (id) => state.tasks.find((t) => t.id === id) || null;
+function todayDone(taskId) {
+  const r = range('day', 0);
+  return inRange(r).filter((s) => s[1] === taskId && s[2] === 'f').length;
+}
+/* ---------- timer ---------- */
+const RING = 678.58;
+const timer = { mode: 'focus', running: false, endAt: 0, left: 1500, total: 1500, cycle: 0, long: false, taskId: null, iv: 0 };
+let audioCtx = null;
+function beep() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = audioCtx.currentTime;
+    [0, 0.26, 0.52].forEach((d, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = i === 2 ? 988 : 784;
+      g.gain.setValueAtTime(0.0001, t0 + d);
+      g.gain.exponentialRampToValueAtTime(0.25, t0 + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.22);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0 + d); o.stop(t0 + d + 0.25);
+    });
+  } catch (e) { /* suara tidak tersedia */ }
+}
+const activeTask = () => taskById(state.activeId);
+function durationSec() {
+  const t = activeTask();
+  if (timer.mode === 'focus') return (t ? t.focus : 25) * 60;
+  return (timer.long ? LONG_MIN : (t ? t.brk : 5)) * 60;
+}
+function loadDuration() {
+  clearInterval(timer.iv);
+  timer.running = false;
+  timer.total = durationSec();
+  timer.left = timer.total;
+}
+const fmtClock = (s) => pad(Math.floor(s / 60)) + ':' + pad(s % 60);
+function modeLabel() { return timer.mode === 'focus' ? 'Fokus' : (timer.long ? 'Istirahat panjang' : 'Istirahat'); }
+function renderTimer() {
+  const t = activeTask();
+  $('nowTask').textContent = t ? t.name : 'Belum ada tugas';
+  $('clock').textContent = fmtClock(timer.left);
+  $('ringLabel').textContent = modeLabel();
+  $('ringBar').style.strokeDashoffset = String(RING * (timer.total ? timer.left / timer.total : 1));
+  const pb = $('playBtn');
+  pb.replaceChildren(ico(timer.running ? 'i-pause' : 'i-play'));
+  pb.setAttribute('aria-label', timer.running ? 'Jeda' : 'Mulai');
+  $('modeFocus').setAttribute('aria-pressed', String(timer.mode === 'focus'));
+  $('modeBreak').setAttribute('aria-pressed', String(timer.mode === 'break'));
+  const done = timer.cycle === 0 ? 0 : ((timer.cycle - 1) % LONG_EVERY) + 1;
+  const cy = $('cycle');
+  cy.replaceChildren();
+  for (let i = 0; i < LONG_EVERY; i++) { const d = document.createElement('i'); if (i < done) d.className = 'done'; cy.append(d); }
+  $('cycleNote').textContent = 'Istirahat panjang ' + LONG_MIN + ' mnt setelah sesi fokus ke-' + LONG_EVERY;
+  document.title = timer.running ? fmtClock(timer.left) + ' - ' + modeLabel() : 'Fokus Lime';
+  updateLiveProgress();
+}
+function flash(msg) {
+  $('saveNote').textContent = msg;
+  clearTimeout(flash.t);
+  flash.t = setTimeout(() => setNote(store.doc ? 'db' : 'local'), 2600);
+}
+function tick() {
+  timer.left = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
+  renderTimer();
+  if (timer.left === 0) complete();
+}
+function start() {
+  if (!activeTask()) { $('fName').focus(); flash('Buat satu tugas dulu, lalu mulai timernya.'); return; }
+  if (timer.left <= 0) loadDuration();
+  timer.taskId = state.activeId;
+  timer.endAt = Date.now() + timer.left * 1000;
+  timer.running = true;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.resume) audioCtx.resume();
+  } catch (e) { /* abaikan */ }
+  clearInterval(timer.iv);
+  timer.iv = setInterval(tick, 250);
+  renderTimer();
+  renderTasks();
+}
+function pause() {
+  if (!timer.running) return;
+  timer.left = Math.max(1, Math.ceil((timer.endAt - Date.now()) / 1000));
+  timer.running = false;
+  clearInterval(timer.iv);
+  renderTimer();
+  renderTasks();
+}
+function advance() {
+  if (timer.mode === 'focus') { timer.cycle++; timer.long = timer.cycle % LONG_EVERY === 0; timer.mode = 'break'; }
+  else { if (timer.long) timer.cycle = 0; timer.long = false; timer.mode = 'focus'; }
+  loadDuration();
+}
+function complete() {
+  clearInterval(timer.iv);
+  timer.running = false;
+  const id = timer.taskId || state.activeId;
+  if (id) {
+    state.sessions.push([Date.now(), id, timer.mode === 'focus' ? 'f' : 'b', Math.round(timer.total / 60)]);
+    persist();
+  }
+  beep();
+  advance();
+  renderAll();
+}
+function setMode(m) {
+  if (timer.mode === m) return;
+  timer.mode = m;
+  timer.long = false;
+  loadDuration();
+  renderAll();
+}
+function selectTask(id) {
+  if (id === state.activeId) return;
+  if (timer.running) { flash('Jeda timer dulu untuk ganti tugas.'); return; }
+  state.activeId = id;
+  loadDuration();
+  persist();
+  renderAll();
+}
+document.addEventListener('visibilitychange', () => { if (timer.running) tick(); });
+/* ---------- daftar tugas ---------- */
+let armed = null, editing = null;
+
+function calcProgress(t) {
+  const isActive = t.id === state.activeId;
+  const isCompleted = Boolean(t.completed);
+  if (isCompleted) {
+    return { pct: 100, fillPct: 100, badge: '100%', detail: 'Selesai' };
+  }
+  if (isActive) {
+    if (timer.mode === 'focus') {
+      const totalSec = timer.total || (t.focus * 60) || 1500;
+      const elapsedSec = Math.max(0, totalSec - timer.left);
+      const pct = Math.min(100, Math.round((elapsedSec / totalSec) * 100));
+      const elapsedMin = Math.floor(elapsedSec / 60);
+      const totalMin = Math.round(totalSec / 60);
+      return {
+        pct,
+        fillPct: pct,
+        badge: pct + '%',
+        detail: elapsedMin + ' dari ' + totalMin + ' mnt (' + fmtClock(elapsedSec) + ')'
+      };
+    } else {
+      const totalSec = timer.total || (t.brk * 60) || 300;
+      const elapsedSec = Math.max(0, totalSec - timer.left);
+      const pct = Math.min(100, Math.round((elapsedSec / totalSec) * 100));
+      return {
+        pct,
+        fillPct: pct,
+        badge: pct + '%',
+        detail: 'Istirahat ' + Math.floor(elapsedSec / 60) + '/' + Math.round(totalSec / 60) + ' mnt'
+      };
+    }
+  }
+  return { pct: 0, fillPct: 0, badge: '0%', detail: t.focus + ' mnt fokus' };
+}
+
+function updateLiveProgress() {
+  if (!state.activeId) return;
+  const t = activeTask();
+  if (!t) return;
+  const p = calcProgress(t);
+  const fill = $('task-fill-' + t.id);
+  const badge = $('task-pct-' + t.id);
+  const detail = $('task-detail-' + t.id);
+  if (fill) fill.style.width = p.fillPct + '%';
+  if (badge) badge.textContent = p.badge;
+  if (detail) detail.textContent = p.detail;
+}
+
+function toggleTaskComplete(t) {
+  if (t.completed) {
+    t.completed = false;
+    flash('Tugas "' + t.name + '" ditandai belum selesai.');
+    persist();
+    renderAll();
+    return;
+  }
+
+  t.completed = true;
+
+  if (t.id === state.activeId && timer.mode === 'focus') {
+    const elapsedSec = Math.max(0, timer.total - timer.left);
+    const elapsedMin = elapsedSec >= 30 ? Math.round(elapsedSec / 60) : (elapsedSec > 0 ? 1 : t.focus);
+
+    clearInterval(timer.iv);
+    timer.running = false;
+    state.sessions.push([Date.now(), t.id, 'f', elapsedMin]);
+    persist();
+    beep();
+    advance();
+    flash('Selesai lebih awal! ' + elapsedMin + ' mnt fokus tercatat.');
+  } else {
+    state.sessions.push([Date.now(), t.id, 'f', t.focus]);
+    persist();
+    beep();
+    flash('Tugas "' + t.name + '" selesai! ' + t.focus + ' mnt fokus tercatat.');
+  }
+
+  renderAll();
+}
+
+function renderTasks() {
+  const ul = $('taskList');
+  ul.replaceChildren();
+  $('taskCount').textContent = state.tasks.length ? state.tasks.length + ' tugas' : '';
+  if (!state.tasks.length) {
+    ul.append(h('li', 'empty', ['Belum ada tugas. Isi formulir di bawah untuk membuat tugas pertamamu.']));
+    return;
+  }
+  state.tasks.forEach((t) => {
+    const isActive = t.id === state.activeId;
+    const isCompleted = Boolean(t.completed);
+    const li = h('li', 'task' + (isActive ? ' active' : '') + (isCompleted ? ' is-completed' : ''));
+
+    const check = h('button', 'task-check-btn' + (isCompleted ? ' checked' : ''));
+    check.type = 'button';
+    check.setAttribute('aria-label', isCompleted ? 'Tandai belum selesai' : 'Selesaikan sekarang');
+    check.title = isCompleted ? 'Selesai! Klik untuk batalkan' : 'Selesaikan sekarang (selesai lebih awal)';
+    check.append(ico('i-check'));
+    check.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleTaskComplete(t);
+    });
+
+    const main = h('button', 'task-main');
+    main.type = 'button';
+    main.setAttribute('aria-pressed', String(isActive));
+    const done = todayDone(t.id);
+    const dots = h('span', 'dots');
+    for (let i = 0; i < Math.max(t.target, done); i++) {
+      const d = document.createElement('i');
+      if (i < done) d.className = 'on';
+      dots.append(d);
+    }
+    dots.append(h('span', '', [done + '/' + t.target + ' hari ini']));
+
+    const nameSpan = h('span', 'task-name', [t.name]);
+    if (isCompleted) {
+      nameSpan.append(h('span', 'task-done-badge', ['Selesai']));
+    }
+
+    const progWrap = h('div', 'task-progress');
+    const track = h('div', 'task-progress-track');
+    const fill = h('div', 'task-progress-fill');
+    fill.id = 'task-fill-' + t.id;
+    track.append(fill);
+
+    const info = h('div', 'task-progress-info');
+    const pctBadge = h('span', 'task-pct-badge');
+    pctBadge.id = 'task-pct-' + t.id;
+    const pctDetail = h('span', 'task-pct-detail');
+    pctDetail.id = 'task-detail-' + t.id;
+    info.append(pctBadge, pctDetail);
+    progWrap.append(track, info);
+
+    const p = calcProgress(t);
+    fill.style.width = p.fillPct + '%';
+    pctBadge.textContent = p.badge;
+    pctDetail.textContent = p.detail;
+
+    main.append(
+      nameSpan,
+      h('span', 'task-meta', [t.focus + ' mnt fokus, ' + t.brk + ' mnt istirahat']),
+      progWrap,
+      dots
+    );
+    main.addEventListener('click', () => selectTask(t.id));
+
+    const edit = h('button', 'mini');
+    edit.type = 'button';
+    edit.setAttribute('aria-label', 'Ubah ' + t.name);
+    edit.append(ico('i-edit'));
+    edit.addEventListener('click', () => startEdit(t));
+
+    const del = h('button', 'mini');
+    del.type = 'button';
+    if (armed === t.id) {
+      del.textContent = 'Hapus?';
+      del.setAttribute('aria-label', 'Klik lagi untuk menghapus ' + t.name);
+      Object.assign(del.style, { width: 'auto', padding: '0 12px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', background: 'var(--danger)', color: '#fff' });
+    } else {
+      del.setAttribute('aria-label', 'Hapus ' + t.name);
+      del.append(ico('i-trash'));
+    }
+    del.addEventListener('click', () => {
+      if (armed !== t.id) {
+        armed = t.id;
+        renderTasks();
+        setTimeout(() => { if (armed === t.id) { armed = null; renderTasks(); } }, 3000);
+        return;
+      }
+      state.tasks = state.tasks.filter((x) => x.id !== t.id);
+      armed = null;
+      if (editing === t.id) resetForm();
+      if (state.activeId === t.id) {
+        state.activeId = state.tasks[0] ? state.tasks[0].id : null;
+        loadDuration();
+      }
+      persist();
+      renderAll();
+    });
+    li.append(check, main, h('div', 'task-actions', [edit, del]));
+    ul.append(li);
+  });
+}
+function resetForm() {
+  editing = null;
+  $('fName').value = '';
+  $('fFocus').value = 25;
+  $('fBreak').value = 5;
+  $('fTarget').value = 4;
+  $('formLabel').textContent = 'Tugas baru';
+  $('formSubmit').textContent = 'Tambah tugas';
+  $('formCancel').hidden = true;
+}
+function startEdit(t) {
+  editing = t.id;
+  $('fName').value = t.name;
+  $('fFocus').value = t.focus;
+  $('fBreak').value = t.brk;
+  $('fTarget').value = t.target;
+  $('formLabel').textContent = 'Ubah tugas';
+  $('formSubmit').textContent = 'Simpan perubahan';
+  $('formCancel').hidden = false;
+  $('fName').focus();
+}
+const clampInt = (v, lo, hi, d) => { const n = parseInt(v, 10); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
+$('taskForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = $('fName').value.trim();
+  if (!name) return;
+  const focus = clampInt($('fFocus').value, 1, 180, 25);
+  const brk = clampInt($('fBreak').value, 1, 60, 5);
+  const target = clampInt($('fTarget').value, 1, 20, 4);
+  if (editing && taskById(editing)) {
+    const t = taskById(editing);
+    Object.assign(t, { name, focus, brk, target });
+    state.names[t.id] = name;
+  } else {
+    const t = { id: uid(), name, focus, brk, target, completed: false };
+    state.tasks.push(t);
+    state.names[t.id] = name;
+    if (!state.activeId) state.activeId = t.id;
+  }
+  resetForm();
+  if (!timer.running) loadDuration();
+  persist();
+  renderAll();
+});
+$('formCancel').addEventListener('click', resetForm);
+
+/* ---------- statistik dan grafik ---------- */
+const PL = { day: 'kemarin', week: 'minggu lalu', month: 'bulan lalu', year: 'tahun lalu' };
+function rangeLabel(p, r) {
+  const fmt = (d) => d.getDate() + ' ' + MONTHS[d.getMonth()];
+  if (p === 'day') return 'Hari ini, ' + fmt(r[0]);
+  if (p === 'week') return fmt(r[0]) + ' - ' + fmt(new Date(r[1].getTime() - 3600000));
+  if (p === 'month') return r[0].toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  return String(r[0].getFullYear());
+}
+function renderStats() {
+  const p = state.period;
+  const PLAB = { day: 'Hari ini', week: 'Minggu', month: 'Bulan', year: 'Tahun' };
+  document.querySelectorAll('#periods .pill').forEach((b) => {
+    const k = b.dataset.p;
+    b.setAttribute('aria-pressed', String(k === p));
+    const cnt = inRange(range(k, 0)).filter((x) => x[2] === 'f').length;
+    b.replaceChildren(PLAB[k], h('span', 'cnt', [String(cnt)]));
+  });
+  const r = range(p, 0), cur = inRange(r), prev = inRange(range(p, -1));
+  const fm = focusMin(cur), pm = focusMin(prev);
+
+  const big = $('sFocus');
+  big.replaceChildren();
+  if (fm >= 60) big.append(String(Math.floor(fm / 60)), h('small', '', ['j']), ' ' + (fm % 60), h('small', '', ['mnt']));
+  else big.append(String(fm), h('small', '', ['mnt']));
+
+  let pct = null;
+  if (pm > 0) pct = Math.round(((fm - pm) / pm) * 100);
+  $('sDelta').textContent = pct !== null
+    ? (pct >= 0 ? '+' : '') + pct + '% dibanding ' + PL[p]
+    : (fm > 0 ? 'Belum ada data ' + PL[p] : 'Belum ada sesi fokus');
+  $('deltaIcon').firstElementChild.setAttribute('href', pct !== null && pct < 0 ? '#i-down' : '#i-up');
+
+  const days = Math.round((r[1] - r[0]) / DAY);
+  const goalPct = Math.min(100, Math.round((fm / (state.goal * days)) * 100));
+  $('goalPct').textContent = goalPct + '%';
+  const gd = $('goalDots');
+  gd.replaceChildren();
+  gd.setAttribute('aria-label', 'Progres target ' + goalPct + ' persen');
+  for (let i = 0; i < 20; i++) { const d = document.createElement('i'); if (i < Math.round(goalPct / 5)) d.className = 'on'; gd.append(d); }
+  if (document.activeElement !== $('goalIn')) $('goalIn').value = state.goal;
+
+  const nf = cur.filter((s) => s[2] === 'f').length, nb = cur.length - nf;
+  $('sCount').textContent = String(nf);
+  $('sCountNote').textContent = nb + ' sesi istirahat' + (nf ? ', rata-rata ' + Math.round(fm / nf) + ' mnt per sesi' : '');
+  const per = {};
+  cur.forEach((s) => { if (s[2] === 'f') per[s[1]] = (per[s[1]] || 0) + s[3]; });
+  const top = Object.entries(per).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const share = $('share');
+  share.replaceChildren();
+  if (!top.length) share.append(h('div', 'muted', ['Belum ada data untuk periode ini.']));
+  top.forEach(([id, min]) => {
+    const bar = h('div', 'share-bar');
+    const fill = document.createElement('i');
+    fill.style.width = Math.round((min / fm) * 100) + '%';
+    bar.append(fill);
+    share.append(h('div', 'share-row', [h('span', '', [taskName(id)]), h('span', '', [fmtDur(min)]), bar]));
+  });
+
+  $('oTotal').textContent = fmtDur(fm);
+  $('ovRange').textContent = rangeLabel(p, r);
+  const { spec, bk, unit, n } = buckets(p);
+  const plot = $('plot');
+  plot.replaceChildren();
+  plot.style.setProperty('--n', String(n));
+  let best = -1, bestM = 0;
+  bk.forEach((x, i) => {
+    if (x.m > bestM) { bestM = x.m; best = i; }
+    const text = spec.full(i) + ': ' + x.f + ' sesi fokus, ' + fmtDur(x.m);
+    const col = h('div', 'col-bar');
+    col.tabIndex = 0;
+    col.setAttribute('aria-label', text);
+    const st = h('div', 'stack');
+    for (let k = 0; k < Math.ceil(x.f / unit); k++) st.append(h('b'));
+    for (let k = 0; k < Math.ceil(x.b / unit); k++) st.append(h('b', 'dk'));
+    const tip = h('div', 'tip', [text]);
+    if (i < bk.length * 0.25) { tip.style.left = '0'; tip.style.transform = 'none'; }
+    else if (i > bk.length * 0.75) { tip.style.left = 'auto'; tip.style.right = '0'; tip.style.transform = 'none'; }
+    col.append(st, h('div', 'xlab', [spec.label(i)]), tip);
+    col.addEventListener('click', () => {
+      plot.querySelectorAll('.show').forEach((el) => { if (el !== col) el.classList.remove('show'); });
+      col.classList.toggle('show');
+    });
+    plot.append(col);
+  });
+  const ya = $('yaxis');
+  ya.replaceChildren();
+  [0, (n / 2) * unit, n * unit].forEach((v) => ya.append(h('span', '', [String(v)])));
+  $('bestNote').textContent = (best >= 0 ? 'Paling produktif: ' + spec.full(best) + ' (' + fmtDur(bestM) + '). ' : 'Belum ada sesi fokus di periode ini. ')
+    + (unit > 1 ? '1 blok = ' + unit + ' sesi.' : '1 blok = 1 sesi.');
+}
+function whenLabel(ts) {
+  const d = new Date(ts), now = new Date();
+  const hm = pad(d.getHours()) + '.' + pad(d.getMinutes());
+  const dd = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / DAY);
+  if (dd === 0) return 'Hari ini, ' + hm;
+  if (dd === 1) return 'Kemarin, ' + hm;
+  return d.getDate() + ' ' + MONTHS[d.getMonth()] + ', ' + hm;
+}
+function renderActs() {
+  const ul = $('acts');
+  ul.replaceChildren();
+  const list = state.sessions.slice(-8).reverse();
+  if (!list.length) { ul.append(h('li', 'empty', ['Belum ada aktivitas. Selesaikan satu sesi fokus untuk melihatnya di sini.'])); return; }
+  list.forEach((s) => {
+    const ic = h('div', 'act-ico' + (s[2] === 'b' ? ' brk' : ''), [ico(s[2] === 'f' ? 'i-focus' : 'i-cup')]);
+    const mid = h('div', '', [h('div', 'act-name', [taskName(s[1])]), h('div', 'act-time', [(s[2] === 'f' ? 'Fokus' : 'Istirahat') + ', ' + whenLabel(s[0])])]);
+    mid.style.minWidth = '0';
+    ul.append(h('li', 'act', [ic, mid, h('div', 'act-min', ['+' + s[3] + ' mnt'])]));
+  });
+}
+function renderAll() {
+  renderTimer();
+  renderTasks();
+  renderStats();
+  renderActs();
+  $('demoChip').hidden = !state.demo;
+}
+function applyState() {
+  if (!timer.running) loadDuration();
+  renderAll();
+}
+
+/* ---------- event ---------- */
+$('playBtn').addEventListener('click', () => (timer.running ? pause() : start()));
+$('resetBtn').addEventListener('click', () => { loadDuration(); renderTimer(); renderTasks(); });
+$('skipBtn').addEventListener('click', () => { advance(); renderAll(); });
+$('modeFocus').addEventListener('click', () => setMode('focus'));
+$('modeBreak').addEventListener('click', () => setMode('break'));
+$('periods').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-p]');
+  if (!b) return;
+  state.period = b.dataset.p;
+  persist();
+  renderStats();
+});
+$('goalIn').addEventListener('change', () => {
+  state.goal = clampInt($('goalIn').value, 10, 1000, 120);
+  $('goalIn').value = state.goal;
+  persist();
+  renderStats();
+});
+$('clearDemo').addEventListener('click', () => {
+  state = normalize({ tasks: [], sessions: [], goal: state.goal, activeId: null, demo: false, period: state.period, names: {} });
+  timer.cycle = 0; timer.mode = 'focus'; timer.long = false;
+  resetForm();
+  loadDuration();
+  persist();
+  renderAll();
+});
+const rootEl = document.documentElement;
+const systemDark = matchMedia('(prefers-color-scheme: dark)');
+const currentTheme = () => rootEl.getAttribute('data-theme') || (systemDark.matches ? 'dark' : 'light');
+function syncTheme() {
+  const t = currentTheme();
+  $('themeLight').setAttribute('aria-pressed', String(t === 'light'));
+  $('themeDark').setAttribute('aria-pressed', String(t === 'dark'));
+}
+function setTheme(t) {
+  rootEl.setAttribute('data-theme', t);
+  try { localStorage.setItem(LS_THEME, t); } catch (e) { /* abaikan */ }
+  syncTheme();
+}
+$('themeLight').addEventListener('click', () => setTheme('light'));
+$('themeDark').addEventListener('click', () => setTheme('dark'));
+try {
+  const th = localStorage.getItem(LS_THEME);
+  if (th === 'dark' || th === 'light') rootEl.setAttribute('data-theme', th);
+} catch (e) { /* abaikan */ }
+if (systemDark.addEventListener) systemDark.addEventListener('change', syncTheme);
+syncTheme();
+
+/* ---------- aplikasi: cadangan data, pasang, offline ---------- */
+$('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(snapshot())], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fokus-pomodoro-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$('importBtn').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', () => {
+  const f = $('importFile').files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(String(rd.result));
+      if (!d || !Array.isArray(d.tasks) || !Array.isArray(d.sessions)) throw new Error('format');
+      if (timer.running) pause();
+      state = normalize(d);
+      timer.cycle = 0; timer.mode = 'focus'; timer.long = false;
+      resetForm();
+      persist();
+      applyState();
+      flash('Data berhasil diimpor.');
+    } catch (e) { flash('Berkas tidak cocok. Pilih berkas ekspor dari aplikasi ini.'); }
+    $('importFile').value = '';
+  };
+  rd.readAsText(f);
+});
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; $('installBtn').hidden = false; });
+$('installBtn').addEventListener('click', async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  try { await deferredInstall.userChoice; } catch (e) { /* abaikan */ }
+  deferredInstall = null;
+  $('installBtn').hidden = true;
+});
+window.addEventListener('appinstalled', () => { $('installBtn').hidden = true; });
+const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone) $('iosHint').hidden = false;
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+
+/* ---------- event modal auth, admin, supabase ---------- */
+let authMode = 'login';
+function openAuthModal(mode) {
+  authMode = mode || 'login';
+  $('authUsername').value = '';
+  $('authPassword').value = '';
+  syncAuthTabs();
+  $('authModal').classList.add('open');
+  $('authUsername').focus();
+}
+
+function closeAuthModal() {
+  $('authModal').classList.remove('open');
+}
+
+function syncAuthTabs() {
+  $('tabLogin').className = 'auth-tab' + (authMode === 'login' ? ' active' : '');
+  $('tabRegister').className = 'auth-tab' + (authMode === 'register' ? ' active' : '');
+  $('authTitle').textContent = authMode === 'login' ? 'Masuk ke Akun' : 'Daftar Akun Baru';
+  $('authSubmit').textContent = authMode === 'login' ? 'Masuk ke Akun' : 'Daftar Sekarang';
+}
+
+$('tabLogin').addEventListener('click', () => { authMode = 'login'; syncAuthTabs(); });
+$('tabRegister').addEventListener('click', () => { authMode = 'register'; syncAuthTabs(); });
+$('authForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const usn = $('authUsername').value.trim();
+  const pw = $('authPassword').value;
+  if (authMode === 'login') await login(usn, pw);
+  else await register(usn, pw);
+});
+$('closeAuthModal').addEventListener('click', closeAuthModal);
+
+$('closeAdminModal').addEventListener('click', () => $('adminModal').classList.remove('open'));
+$('closeInspectModal').addEventListener('click', () => $('inspectUserModal').classList.remove('open'));
+$('closeSupabaseModal').addEventListener('click', () => $('supabaseModal').classList.remove('open'));
+
+$('adminRefreshBtn').addEventListener('click', () => renderAdminDashboard($('adminSearchInput').value));
+$('adminSearchInput').addEventListener('input', (e) => renderAdminDashboard(e.target.value));
+
+$('btnSupabase').addEventListener('click', openSupabaseModal);
+$('supabaseForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  saveSupabaseConfig($('sbUrl').value, $('sbKey').value);
+});
+$('btnDisconnectSupabase').addEventListener('click', disconnectSupabase);
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+initSupabase();
+renderAuthUI();
+loadDuration();
+renderAll();
+initStore();
+})();
+</script>
+</body>
+</html>
