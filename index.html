@@ -292,6 +292,8 @@ img { max-width: 100%; }
   height: 38px; padding: 0 16px; border-radius: 999px;
   font-size: 13px; font-weight: 600; transition: transform .15s, opacity .15s;
 }
+.btn-auth svg { width: 16px; height: 16px; flex-shrink: 0; }
+.user-chip svg { width: 16px; height: 16px; flex-shrink: 0; }
 .btn-auth:hover { transform: scale(1.03); opacity: .95; }
 .btn-admin-dash {
   background: var(--blue); color: var(--on-blue);
@@ -442,7 +444,6 @@ img { max-width: 100%; }
   <header class="top">
     <div class="brand"><svg aria-hidden="true"><use href="#i-logo"/></svg> Fokus Lime</div>
     <div class="top-right">
-      <button type="button" class="chip-btn-sm" id="btnSupabase" title="Pengaturan Database Supabase"><span class="dot-status" id="supabaseDot"></span> <svg style="width:14px;height:14px" aria-hidden="true"><use href="#i-cloud"/></svg> Supabase</button>
       <div id="authArea"></div>
       <div class="chip" id="demoChip" hidden><span>Data contoh</span><button type="button" id="clearDemo">Mulai dari nol</button></div>
       <div class="theme-switch" role="group" aria-label="Mode tampilan">
@@ -620,6 +621,7 @@ img { max-width: 100%; }
         <div class="admin-stat-card">
           <span class="admin-stat-lbl">Database</span>
           <span class="admin-stat-val" id="adminDbStatus" style="font-size:15px;margin-top:4px">Local</span>
+          <button type="button" class="btn-action-sm btn-inspect" id="btnAdminConfigSb" style="margin-top:6px;width:fit-content">Atur Supabase</button>
         </div>
       </div>
       <div class="admin-search-wrap">
@@ -1101,6 +1103,7 @@ function logout() {
   state = normalize(lsLoad() || demoState());
   applyState();
   flash(prev ? 'Sampai jumpa, ' + prev.username + '!' : 'Berhasil keluar.');
+  openAuthModal('login');
 }
 
 async function openAdminDashboard() {
@@ -1978,7 +1981,8 @@ $('closeSupabaseModal').addEventListener('click', () => $('supabaseModal').class
 $('adminRefreshBtn').addEventListener('click', () => renderAdminDashboard($('adminSearchInput').value));
 $('adminSearchInput').addEventListener('input', (e) => renderAdminDashboard(e.target.value));
 
-$('btnSupabase').addEventListener('click', openSupabaseModal);
+if ($('btnSupabase')) $('btnSupabase').addEventListener('click', openSupabaseModal);
+if ($('btnAdminConfigSb')) $('btnAdminConfigSb').addEventListener('click', openSupabaseModal);
 $('supabaseForm').addEventListener('submit', (e) => {
   e.preventDefault();
   saveSupabaseConfig($('sbUrl').value, $('sbKey').value);
@@ -2001,6 +2005,11 @@ renderAuthUI();
 loadDuration();
 renderAll();
 initStore();
+
+// Langsung buka modal login jika belum ada pengguna yang login saat buka web
+if (!getCurrentUser()) {
+  openAuthModal('login');
+}
 })();
 </script>
 </body>
